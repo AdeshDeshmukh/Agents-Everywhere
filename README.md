@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
-  <img alt="agents-everywhere: a coding agent for any machine, held to the rules you write. A run transcript where reading ./logs/app.log, running grep and writing ./reports/incident.md are allowed, reading ./scratch/oncall-notes.md asks you first, and emptying ./logs/app.log or reading /etc/hostname is refused." src="docs/assets/hero-light.svg">
+  <img alt="agents-everywhere: a coding agent for any machine, held to the rules you write. What an agent tried and what its rules decided: reading ./logs/app.log is allowed because ./logs is readable; running grep is allowed because grep * is allowed; writing ./reports/incident.md is allowed because ./reports is writable; reading ./scratch/oncall-notes.md asks you because no rule covers it; emptying ./logs/app.log is refused because ./logs is read-only; reading /etc/hostname is refused because /etc is never allowed." src="docs/assets/hero-light.svg">
 </picture>
 
 [![CI](https://github.com/codity-ai/Agents-Everywhere/actions/workflows/ci.yml/badge.svg)](https://github.com/codity-ai/Agents-Everywhere/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-0F7550)](LICENSE) [![Status: pre-release](https://img.shields.io/badge/status-pre--release-9C6015)](#quick-start)
@@ -8,6 +8,15 @@
 agents-everywhere runs a coding agent on machines you choose, such as a VM, a CI runner, a debug pod or a laptop, and holds it to rules you write: which paths it may read or change, which commands it may run and which URLs it may fetch. Anything outside those rules is refused, or held until you answer it from a small control plane you host yourself.
 
 It is a hard fork of [opencode](https://github.com/anomalyco/opencode) (MIT), maintained by [Codity](https://codity.ai). The engine keeps opencode's config format, so [opencode's documentation](https://opencode.ai/docs) for config, agents, commands and providers still applies.
+
+## See it run
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/control-plane-dark.png">
+  <img alt="The control plane's page for an agent called payments-oncall: its spend, runs and tokens; its rules, with ./logs readable, ./reports writable, grep and wc allowed and credentials and destructive commands never allowed; a question waiting on you, asking to read ./scratch/oncall-notes.md, with Allow once, Allow for this run, Always allow and Refuse; and its runs, one running on web-prod-03 and one finished on ci-runner-12." src="docs/assets/control-plane-light.png">
+</picture>
+
+An agent's page in the control plane: what it may touch, what it is waiting to ask you, and every machine it has run on.
 
 ## What you get
 
@@ -17,17 +26,10 @@ It is a hard fork of [opencode](https://github.com/anomalyco/opencode) (MIT), ma
 
 ## How it works
 
-```mermaid
-flowchart TB
-  you["You, in a browser"] -- "create agents, answer questions" --> cp["Control plane"]
-  subgraph machine["Each machine that runs an agent"]
-    runner["Runner"] -- "writes the rules into the engine's config" --> engine["Engine"]
-    engine -- "checks every tool call" --> work[("Files, commands, URLs")]
-  end
-  runner -- "heartbeats, transcript, questions" --> cp
-  cp -. "task, rules and decisions, in each reply" .-> runner
-  engine <-- "your API key" --> model["Model provider"]
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/how-it-works-dark.svg">
+  <img alt="You create agents and answer their questions in the control plane. On each machine, a runner calls the control plane with heartbeats, the transcript and questions, and receives the task, rules and decisions in each reply. The runner writes the rules into the engine's config, the engine checks every tool call against them, and the engine reaches the model provider with your API key." src="docs/assets/how-it-works-light.svg">
+</picture>
 
 The runner always calls out and the control plane only answers, so nothing ever connects into the machine. The rules travel with the run and are enforced by the engine on the machine itself: the control plane can answer the questions a run asks, but it cannot change the rules of a run that is already going. The wire format is in [`docs/runner-protocol.md`](docs/runner-protocol.md), and any server that speaks it can drive the runner.
 
