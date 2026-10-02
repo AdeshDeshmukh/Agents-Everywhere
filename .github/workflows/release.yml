@@ -1,0 +1,49 @@
+name: release
+
+# Push a tag like v1.2.0. The control plane redirects a runner's download to
+# releases/download/v<version>/agents-everywhere-<platform>, and the runner
+# refuses a binary that does not match the .sha256 published beside it, so
+# these names are part of the runner protocol.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+
+      - name: Build every platform
+        working-directory: packages/agents-everywhere
+        env:
+          AGENTS_EVERYWHERE_VERSION: ${{ github.ref_name }}
+          AGENTS_EVERYWHERE_CHANNEL: latest
+        run: |
+          export AGENTS_EVERYWHERE_VERSION="${AGENTS_EVERYWHERE_VERSION#v}"
+          bun run script/build.ts
+
+      - name: Collect binaries and checksums
+        run: |
+          mkdir -p release
+          for platform in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            src="packages/agents-everywhere/dist/agents-everywhere-$platform/bin/agents-everywhere"
+            test -f "$src" || { echo "missing build for $platform"; exit 1; }
+            cp "$src" "release/agents-everywhere-$platform"
+            (cd release && sha256sum "agents-everywhere-$platform" > "agents-everywhere-$platform.sha256")
+          done
+          (cd release && cat *.sha256 > SHA256SUMS)
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" release/* --title "$TAG" --generate-notes

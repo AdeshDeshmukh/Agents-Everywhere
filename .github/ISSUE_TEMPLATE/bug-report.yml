@@ -1,0 +1,41 @@
+name: Bug report
+description: Something in the engine, runner or control plane does not work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. Paste errors and logs as text.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Engine (CLI, TUI, serve)
+        - Runner (install command, harness)
+        - Control plane (API or web UI)
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: agents-everywhere-version
+    attributes:
+      label: Version
+      description: Output of `agents-everywhere --version`, or the commit you built from.
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal

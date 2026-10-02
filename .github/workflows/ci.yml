@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-node@v4
+        with:
+          # The oldest Node the runner supports; the bundle test runs it there.
+          node-version: 18
+      - run: bun install --frozen-lockfile
+
+      - name: Runner
+        working-directory: packages/harness
+        run: |
+          bun run typecheck
+          bun run test
+
+      - name: Control plane and runner-protocol conformance
+        working-directory: packages/control
+        run: |
+          bun run typecheck
+          bun run test
+
+      - name: Engine permission and tool suites
+        working-directory: packages/agents-everywhere
+        run: bun test test/permission test/tool
+
+      - name: Core
+        working-directory: packages/core
+        run: bun test

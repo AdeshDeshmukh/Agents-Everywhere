@@ -1,0 +1,4 @@
+{
+  "$schema": "https://agents-everywhere.ai/config.json",
+  "model": "anthropic/claude-sonnet"
+}

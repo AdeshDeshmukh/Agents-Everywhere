@@ -1,0 +1,36 @@
+{
+  "$schema": "https://v2-8-13.turborepo.dev/schema.json",
+  "globalEnv": ["CI", "AGENTS_EVERYWHERE_DISABLE_SHARE"],
+  "globalPassThroughEnv": ["CI", "AGENTS_EVERYWHERE_DISABLE_SHARE"],
+  "tasks": {
+    "typecheck": {},
+    "build": {
+      "dependsOn": [],
+      "outputs": ["dist/**"]
+    },
+    "agents-everywhere#test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "passThroughEnv": ["*"]
+    },
+    "@agents-everywhere/core#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@agents-everywhere/function#test": {
+      "outputs": []
+    },
+    "@agents-everywhere/app#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@agents-everywhere/ui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@agents-everywhere/session-ui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    }
+  }
+}

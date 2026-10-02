@@ -1,0 +1,43 @@
+# Running the control plane
+
+`agents-everywhere control` is a small server with a web UI. You create agents in it, mint install commands, and then watch, talk to and stop the agents running on your machines. It keeps everything in one SQLite database.
+
+## Start it
+
+```bash
+agents-everywhere control
+```
+
+It listens on `http://127.0.0.1:4800` and prints an admin token the first time it starts. Sign in to the UI with that token. It is shown once; `--rotate-admin-token` issues a new one and signs out every session.
+
+Data lives in `~/.local/share/agents-everywhere-control` (or `--data <dir>`): the database, and `secret.key`, which signs run tokens and encrypts stored LLM keys. Back both up together; the database's keys cannot be read without it. `AGENTS_EVERYWHERE_CONTROL_SECRET` supplies the key from the environment instead.
+
+## Let other machines reach it
+
+Machines that run agents call the control plane, so it has to be reachable from them.
+
+```bash
+agents-everywhere control --hostname 0.0.0.0 --public-url https://agents.example.com --tls-cert cert.pem --tls-key key.pem
+```
+
+- `--public-url` is the address install commands point machines at.
+- Listening beyond localhost without TLS is refused, because the admin token and every agent's LLM key would cross the network unencrypted. Behind a TLS-terminating reverse proxy, pass `--insecure` and keep the proxy's TLS in front.
+
+## Engine binaries
+
+An install command downloads the engine from the control plane. A release build of `agents-everywhere` serves its own binary for its own platform and redirects the others to the matching GitHub release. Running from source, or serving builds you made yourself, pass `--binaries <dir>` with `<dir>/<platform>/agents-everywhere` for each platform you need. Checksums are computed and served beside each file.
+
+## Installing an agent on a machine
+
+On the agent's page, create an install command and run it in the directory the agent should work in. The machine needs Node.js 18 or newer and outbound access to the control plane. The command works once and expires after five minutes. If a machine does not behave, run the runner's own checks:
+
+```bash
+node ~/.agents-everywhere-runner/harness.cjs --preflight --api-url=https://agents.example.com
+```
+
+## What protects what
+
+- **Rules are enforced on the machine**, by the engine, on every tool call. The control plane only stores them; a stolen control-plane session can change rules for the next run but not reach into a running one.
+- Rules that would make the path rules meaningless (allowing `sh`, `python`, `git *`, `make`, `tee` and similar) are refused unless explicitly acknowledged, and can never be added from a one-click approval.
+- **The LLM key** is stored encrypted and sent only in the handshake of a run of that agent. Secrets from AWS, GCP or Vault are fetched by the machine itself; only their references are stored.
+- **Admin access** is one token, stored as an argon2id hash. Browser sessions use an HttpOnly, SameSite=Strict cookie plus a CSRF token; sign-in attempts are rate limited.
