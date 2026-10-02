@@ -46,7 +46,7 @@ describe("LLMGatewayPlugin", () => {
       yield* addPlugin()
       expect((yield* catalog.provider.get(ProviderV2.ID.make("llmgateway")))?.request.headers).toEqual({
         Existing: "value",
-        "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+        "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
         "X-Title": "agents-everywhere",
         "X-Source": "agents-everywhere",
       })

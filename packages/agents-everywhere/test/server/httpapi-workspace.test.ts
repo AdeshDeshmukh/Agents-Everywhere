@@ -399,7 +399,7 @@ describe("workspace HttpApi", () => {
             "content-type": "application/json",
             "x-agents-everywhere-workspace": "internal",
           },
-          body: JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/agents-everywhere/main/schema/config.json" }),
+          body: JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json" }),
         })
 
         const responseBody = yield* response.text
@@ -416,7 +416,7 @@ describe("workspace HttpApi", () => {
               "content-type": "application/json",
               "x-target-auth": "secret",
             }),
-            body: JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/agents-everywhere/main/schema/config.json" }),
+            body: JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json" }),
           },
         ])
         expect(forwarded[0]?.headers).not.toHaveProperty("x-agents-everywhere-directory")

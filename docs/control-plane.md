@@ -1,6 +1,6 @@
 # Running the control plane
 
-`agents-everywhere control` is a small server with a web UI. You create agents in it, mint install commands, and then watch, talk to and stop the agents running on your machines. It keeps everything in one SQLite database.
+`agents-everywhere control` is a small server with a web UI. You create agents in it, mint install commands, and then watch the agents running on your machines, answer what they ask for, and stop them. It keeps everything in one SQLite database.
 
 ## Start it
 

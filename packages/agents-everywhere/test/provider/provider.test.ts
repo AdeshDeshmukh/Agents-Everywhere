@@ -1280,7 +1280,7 @@ it.instance(
   Effect.gen(function* () {
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("nvidia")].options.headers).toEqual({
-      "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+      "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
       "X-Title": "agents-everywhere",
       "X-BILLING-INVOKE-ORIGIN": "AgentsEverywhere",
     })
@@ -1293,7 +1293,7 @@ it.instance(
   Effect.gen(function* () {
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("nvidia")].options.headers).toEqual({
-      "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+      "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
       "X-Title": "agents-everywhere",
       "X-BILLING-INVOKE-ORIGIN": "AgentsEverywhere",
     })

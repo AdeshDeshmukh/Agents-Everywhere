@@ -96,7 +96,7 @@ export async function tmpdir<T>(options?: TmpDirOptions<T>) {
     await Bun.write(
       path.join(dirpath, "agents-everywhere.json"),
       JSON.stringify({
-        $schema: "https://raw.githubusercontent.com/codity-ai/agents-everywhere/main/schema/config.json",
+        $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json",
         ...options.config,
       }),
     )
@@ -154,7 +154,7 @@ export function tmpdirScoped<E = never, R = never>(options?: {
       yield* Effect.promise(() =>
         fs.writeFile(
           path.join(dir, "agents-everywhere.json"),
-          JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/agents-everywhere/main/schema/config.json", ...resolved }),
+          JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json", ...resolved }),
         ),
       )
     }

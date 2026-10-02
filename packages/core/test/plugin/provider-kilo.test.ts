@@ -39,7 +39,7 @@ describe("KiloPlugin", () => {
       yield* addPlugin()
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo")))?.request.headers).toEqual({
         Existing: "value",
-        "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+        "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
         "X-Title": "agents-everywhere",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.openrouter))?.request.headers).toEqual({})
@@ -61,7 +61,7 @@ describe("KiloPlugin", () => {
       yield* addPlugin()
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo")))?.request.headers).toEqual({
-        "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+        "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
         "X-Title": "agents-everywhere",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo")))?.request.headers).not.toHaveProperty(
@@ -90,7 +90,7 @@ describe("KiloPlugin", () => {
       yield* addPlugin()
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo")))?.request.headers).toEqual({
-        "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+        "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
         "X-Title": "agents-everywhere",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("custom-kilo")))?.request.headers).toEqual({})

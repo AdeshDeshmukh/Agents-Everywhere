@@ -311,7 +311,7 @@ const writeText = Effect.fn("test.writeText")(function* (file: string, text: str
 const writeConfig = Effect.fn("test.writeConfig")(function* (dir: string, config: Partial<ConfigV1.Info>) {
   yield* writeText(
     path.join(dir, "agents-everywhere.json"),
-    JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/agents-everywhere/main/schema/config.json", ...config }),
+    JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json", ...config }),
   )
 })
 

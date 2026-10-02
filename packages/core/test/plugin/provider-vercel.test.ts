@@ -32,7 +32,7 @@ describe("VercelPlugin", () => {
       yield* addPlugin()
       expect((yield* catalog.provider.get(ProviderV2.ID.make("vercel")))?.request.headers).toEqual({
         Existing: "1",
-        "http-referer": "https://github.com/codity-ai/agents-everywhere",
+        "http-referer": "https://github.com/codity-ai/Agents-Everywhere",
         "x-title": "agents-everywhere",
       })
     }),

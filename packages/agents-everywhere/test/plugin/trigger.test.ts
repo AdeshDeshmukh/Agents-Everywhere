@@ -41,7 +41,7 @@ function withProject<A, E, R>(source: string, self: Effect.Effect<A, E, R>) {
             path.join(test.directory, "agents-everywhere.json"),
             JSON.stringify(
               {
-                $schema: "https://raw.githubusercontent.com/codity-ai/agents-everywhere/main/schema/config.json",
+                $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json",
                 plugin: [pathToFileURL(file).href],
               },
               null,

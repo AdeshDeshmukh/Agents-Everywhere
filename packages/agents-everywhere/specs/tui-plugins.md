@@ -18,7 +18,7 @@ Example:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/codity-ai/agents-everywhere/main/schema/tui.json",
+  "$schema": "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/tui.json",
   "theme": "smoke-theme",
   "leader_timeout": 2000,
   "keybinds": {

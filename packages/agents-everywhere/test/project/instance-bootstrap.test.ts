@@ -52,7 +52,7 @@ const bootstrapFixture = Effect.gen(function* () {
     Bun.write(
       path.join(dir, "agents-everywhere.json"),
       JSON.stringify({
-        $schema: "https://raw.githubusercontent.com/codity-ai/agents-everywhere/main/schema/config.json",
+        $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json",
         plugin: [pathToFileURL(pluginFile).href],
       }),
     ),

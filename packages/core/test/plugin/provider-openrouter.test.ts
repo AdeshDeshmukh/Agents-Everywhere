@@ -39,7 +39,7 @@ describe("OpenRouterPlugin", () => {
 
       expect((yield* catalog.provider.get(ProviderV2.ID.openrouter))?.request.headers).toEqual({
         Existing: "value",
-        "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+        "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
         "X-Title": "agents-everywhere",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("nvidia")))?.request.headers).toEqual({})

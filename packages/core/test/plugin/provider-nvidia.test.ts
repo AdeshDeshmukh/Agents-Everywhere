@@ -39,7 +39,7 @@ describe("NvidiaPlugin", () => {
       yield* addPlugin()
       expect((yield* catalog.provider.get(ProviderV2.ID.make("nvidia")))?.request.headers).toEqual({
         Existing: "value",
-        "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+        "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
         "X-Title": "agents-everywhere",
         "X-BILLING-INVOKE-ORIGIN": "AgentsEverywhere",
       })
@@ -62,7 +62,7 @@ describe("NvidiaPlugin", () => {
       yield* addPlugin()
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("nvidia")))?.request.headers).toEqual({
-        "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+        "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
         "X-Title": "agents-everywhere",
         "X-BILLING-INVOKE-ORIGIN": "AgentsEverywhere",
       })
@@ -88,7 +88,7 @@ describe("NvidiaPlugin", () => {
       yield* addPlugin()
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("nvidia")))?.request.headers).toEqual({
-        "HTTP-Referer": "https://github.com/codity-ai/agents-everywhere",
+        "HTTP-Referer": "https://github.com/codity-ai/Agents-Everywhere",
         "X-Title": "agents-everywhere",
         "X-BILLING-INVOKE-ORIGIN": "CustomOrigin",
       })
