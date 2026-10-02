@@ -1,8 +1,7 @@
 - To regenerate the legacy JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit `src/generated` or `src/generated-effect` directly.
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk-next` composes Client, Core, and Server.
-- The default branch in this repo is `dev`.
-- Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
+- The default branch in this repo is `main`; use `main` or `origin/main` for diffs.
 
 ## Branch Names
 
@@ -12,11 +11,9 @@ Examples: `session-recovery`, `fix-scroll-state`, `regenerate-sdk`.
 
 ## Commits and PR Titles
 
-Use conventional commit-style messages and PR titles: `type(scope): summary`.
+Write commit messages and PR titles as one short line in the imperative mood, saying what the change does, as `CONTRIBUTING.md` asks.
 
-Valid types are `feat`, `fix`, `docs`, `chore`, `refactor`, and `test`. Scopes are optional; use the affected package or area when helpful, e.g. `core`, `agents-everywhere`, `tui`, `app`, `desktop`, `sdk`, or `plugin`.
-
-Examples: `fix(tui): simplify thinking toggle styling`, `docs: update contributing guide`, `chore(sdk): regenerate types`.
+Examples: `Fix symlink check on macOS`, `Ask before shell writes into read-only paths`, `Regenerate SDK types`.
 
 ## Style Guide
 

@@ -12,7 +12,7 @@ It is a hard fork of [opencode](https://github.com/anomalyco/opencode) (MIT), ta
 |---|---|---|
 | Engine | `packages/agents-everywhere` | The agent itself: the CLI, the TUI, and the HTTP server (`agents-everywhere serve`) that runs sessions and enforces permissions on every tool call. |
 | Runner | `packages/harness` | A dependency-free Node script installed on a machine with one `curl` command. It checks in with the control plane, turns the agent's permission rules into the engine's config, runs the engine, and reports every step back. |
-| Control plane | `packages/control` | A single process with SQLite and a small web UI. You create agents, mint install commands, read transcripts, chat with a running agent, approve or refuse what it asks for, and stop it. |
+| Control plane | `packages/control` | A single process with SQLite and a small web UI. You create agents, mint install commands, read transcripts, approve or refuse what an agent asks for, and stop it. |
 
 The runner and the control plane talk over a small HTTP protocol described in [`docs/runner-protocol.md`](docs/runner-protocol.md). Any server that implements it can drive the runner.
 
@@ -26,7 +26,9 @@ The runner and the control plane talk over a small HTTP protocol described in [`
 
 2. Open http://127.0.0.1:4800, sign in with the token, and create an agent: a task, a model, its API key, and the paths and commands it may use.
 3. On the agent's page, create an install command and run it on the machine the agent should work on, in the directory it should work in. The machine needs Node.js 18 or newer.
-4. Watch the transcript, send the agent messages, answer what it asks for, or stop it.
+
+   The agent reads that directory's instruction files (`AGENTS.md`, `CLAUDE.md`) as instructions, the way any coding agent does, so start it where those files say what you want. The rules still apply to whatever they ask for, but an instruction file can make it ask for things you did not intend.
+4. Watch the transcript, answer what it asks for under **Waiting on you**, or stop it. For a back-and-forth conversation, set the agent's run mode to **Interactive** and work with it in the terminal where you ran the install command.
 
 To reach the control plane from other machines, and for what protects what, see [Running the control plane](docs/control-plane.md).
 
@@ -59,6 +61,18 @@ Across layers, precedence is kept: rulesets are merged in increasing precedence 
 The scan above only ever asked `external_directory`, which by definition looks outside the worktree. A command that wrote *inside* it was checked by nothing: the filesystem tools never see a shell redirect, so `: > logs/worker.log` truncated a file in a directory granted read-only and no rule heard about it. `tool/shell.ts` now separates the arguments a command changes from the ones it reads, and asks `edit` on the worktree-relative path for each of them, in the same pattern space the write and edit tools use. That covers redirection targets (`>` and `>>`, not `<`) and the path arguments of the file-changing commands, with only the destination counted for `cp`, `mv` and `ln`.
 
 It is deliberately not a complete seal, and the UI says so: a command that writes wherever an option points it (`tee`, `dd`, `sed -i`, `curl -o`) cannot be recognised by argument shape, so allowing one of those in the bash rules is still a trust decision.
+
+### A bare redirect is checked like any other write
+
+A line that is only a redirect (`> file`, `>> file`) has no command in it, so the scan above, which walks commands, never saw it, and it created or emptied its target with no question asked. Redirects are now read off the whole line as well as each command, and a line with no command in it is asked about as a whole.
+
+### Searches are checked against the folder they search
+
+`glob` and `grep` asked permission for their search text (`*.ts`, `ERROR`) rather than for where they looked, so path rules never applied to them: a search inside a granted folder asked anyway, and one outside it could be allowed by a rule about a pattern. Both now ask about the directory being searched, so they follow the same path rules as `read`.
+
+### An approval covers what was asked about, not everything
+
+"Allow for the rest of the session" on a read, write, edit, patch or fetch used to approve that tool for every target, because each tool offered `*` as what to remember. It now remembers only the file or URL in the question. A request also names only the targets the rules leave open, so refusing it does not read as refusing something already allowed.
 
 ### Symlinks cannot carry an operation out of the worktree
 

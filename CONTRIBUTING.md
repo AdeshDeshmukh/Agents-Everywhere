@@ -26,7 +26,7 @@ To build a standalone engine binary for your own platform:
 |---|---|
 | `packages/agents-everywhere` | The engine: CLI, sessions, tools, permission checks, HTTP server |
 | `packages/core` | Shared engine internals: config, providers, storage |
-| `packages/tui` | The terminal UI (SolidJS on [opentui](https://github.com/sst/opentui)) |
+| `packages/tui` | The terminal UI (SolidJS on [opentui](https://github.com/anomalyco/opentui)) |
 | `packages/harness` | The runner installed on a machine by the install command |
 | `packages/control` | The self-hosted control plane: API, SQLite store and web UI |
 | `packages/plugin` | `@agents-everywhere/plugin`, for writing plugins and custom tools |
