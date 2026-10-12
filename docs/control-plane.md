@@ -29,6 +29,8 @@ An install command downloads the engine from the control plane. A release build 
 
 ## Installing an agent on a machine
 
+For a runnable example, independent harness builds, runner options and troubleshooting, see [Using the harness](harness.md).
+
 On the agent's page, create an install command and run it in the directory the agent should work in. The machine needs Node.js 18 or newer and outbound access to the control plane. The command works once and expires after five minutes. If a machine does not behave, run the runner's own checks:
 
 ```bash
