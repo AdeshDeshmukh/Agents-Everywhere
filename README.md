@@ -1,11 +1,11 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
-  <img alt="agents-everywhere: a coding agent for any machine, held to the rules you write. What an agent tried and what its rules decided: reading ./logs/app.log is allowed because ./logs is readable; running grep is allowed because grep * is allowed; writing ./reports/incident.md is allowed because ./reports is writable; reading ./scratch/oncall-notes.md asks you because no rule covers it; emptying ./logs/app.log is refused because ./logs is read-only; reading /etc/hostname is refused because /etc is never allowed." src="docs/assets/hero-light.svg">
+  <img alt="agents-everywhere: a coding agent for Linux and macOS, with rules you write. What an agent tried and what its rules decided: reading ./logs/app.log is allowed because ./logs is readable; running grep is allowed because grep * is allowed; writing ./reports/incident.md is allowed because ./reports is writable; reading ./scratch/oncall-notes.md asks you because no rule covers it; emptying ./logs/app.log is refused because ./logs is read-only; reading /etc/hostname is refused because /etc is never allowed." src="docs/assets/hero-light.svg">
 </picture>
 
 [![CI](https://github.com/codity-ai/Agents-Everywhere/actions/workflows/ci.yml/badge.svg)](https://github.com/codity-ai/Agents-Everywhere/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-0F7550)](LICENSE) [![Status: pre-release](https://img.shields.io/badge/status-pre--release-9C6015)](#quick-start)
 
-agents-everywhere runs a coding agent on machines you choose, such as a VM, a CI runner, a debug pod or a laptop, and holds it to rules you write: which paths it may read or change, which commands it may run and which URLs it may fetch. Anything outside those rules is refused, or held until you answer it from a small control plane you host yourself.
+agents-everywhere runs a coding agent on Linux and macOS machines you choose, such as a VM, a CI runner, a debug pod or a laptop. You write tool permission rules for which paths it may read or change, which commands it may run and which URLs it may fetch. Tool calls outside those rules are refused, or held until you answer them from a small control plane you host yourself.
 
 It is a hard fork of [opencode](https://github.com/anomalyco/opencode) (MIT), maintained by [Codity](https://codity.ai). The engine keeps opencode's config format, so [opencode's documentation](https://opencode.ai/docs) for config, agents, commands and providers still applies.
 
@@ -20,7 +20,7 @@ An agent's page in the control plane: what it may touch, what it is waiting to a
 
 ## What you get
 
-- **Rules that hold on the machine.** The engine checks every read, write, shell command and fetch before it happens. Paths are resolved first, so `..` and symlinks cannot walk out of a granted folder, and the most specific rule wins, so `./logs` can be readable while `./logs/private` is not.
+- **Tool permissions checked on the machine.** The engine checks its read, write, shell and fetch tool calls before executing them. Path checks resolve `..` and symlinks, and the most specific rule wins, so `./logs` can be readable while `./logs/private` is not. These checks are not an operating-system sandbox: allowing interpreters or commands with unrecognised file-output options can make path rules advisory. See [`SECURITY.md`](SECURITY.md) for the boundaries.
 - **Questions instead of failures.** In **Ask me** mode, an action your rules do not cover waits for you under **Waiting on you**: allow it once, for this run, always, or refuse it. Anything on the never-allowed list is refused without asking.
 - **One process you host.** The control plane is a single program with SQLite and a web UI. A machine joins with one install command that works once and expires after five minutes. Models run on your own key for Anthropic, OpenAI, Google or OpenRouter.
 
@@ -35,7 +35,9 @@ The runner always calls out and the control plane only answers, so nothing ever 
 
 ## Quick start
 
-agents-everywhere is pre-release: no binaries or packages are published yet, so build the engine from source. You need [Bun](https://bun.sh) 1.3 or newer.
+agents-everywhere is pre-release: no binaries or packages are published yet, so build the engine from source. Use [Bun](https://bun.sh) 1.3.14, the version used by CI; build scripts accept compatible newer Bun 1.x versions.
+
+The runner supports Linux with glibc and macOS on x64 or arm64. Windows and Alpine/musl are not supported. Agent machines need Node.js 18 or newer, Bash and curl; a model-provider API key is required for a real run. A compiled control plane serves its own platform's engine; provide builds for additional machine platforms with `--binaries`, as described in [Running the control plane](docs/control-plane.md).
 
 1. Build the engine and start a control plane. It prints an admin token the first time; keep it.
 
@@ -75,7 +77,7 @@ Rules come in four groups. Paths are relative to the directory the install comma
 | Group | Example | What it means |
 |---|---|---|
 | Paths | `./logs` read, `./reports` read and write | The agent may read or change files there, and nowhere else. |
-| Commands | `git status`, `wc *` | The agent may run these, and `*` matches any arguments. A command's file writes are still checked against the path rules. |
+| Commands | `git status`, `wc *` | The agent may run these, and `*` matches any arguments. Recognised file arguments and redirection targets are checked against path rules; arbitrary program behaviour is not contained. |
 | URLs | `https://api.github.com/*` | The agent may fetch these. |
 | Never allowed | `~/.ssh`, `env *`, `sudo *` | Refused without asking, and stronger than any allow. New agents start with a set of these for credentials, `/etc` and destructive commands. |
 

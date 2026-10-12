@@ -8,7 +8,7 @@ The control plane manages agents and install tokens. The runner checks in, downl
 
 | Machine | Requirements |
 |---|---|
-| Build machine | Bun 1.3 or newer and this repository's dependencies installed with `bun install`. |
+| Build machine | Bun 1.3.14 (the CI version; compatible newer Bun 1.x versions are accepted) and this repository's dependencies installed with `bun install`. |
 | Control-plane host | The compiled engine's `control` command, or Bun to run `packages/control` from source. |
 | Agent machine | Node.js 18 or newer, Bash and curl for the installer, a writable home directory and outbound access to the control plane and model provider. Interactive mode also needs a terminal. |
 

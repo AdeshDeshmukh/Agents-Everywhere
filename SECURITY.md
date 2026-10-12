@@ -23,5 +23,6 @@ We aim to acknowledge a report within 3 working days and to agree a disclosure d
 
 ## Known limits (not vulnerabilities)
 
+- Permission checks run at the engine's tool boundary, not in an operating-system sandbox. They do not isolate arbitrary programs, plugins or child processes from the host. Run agents under an account or container whose operating-system permissions match the access you intend to grant.
 - Allowing a command that runs other commands or writes wherever it is pointed (`sh`, `python`, `make`, `tee`, `sed -i`, `dd` and similar) makes the path rules advisory. The control plane refuses such rules unless they are explicitly acknowledged. Commands that write through an option it does not recognise, such as `curl -o` or `wget -O`, are not flagged, so allowing `curl *` or `wget *` is a trust decision too.
 - An agent granted write access to a repository can change that repository's own configuration, including `.git/config`.

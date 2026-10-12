@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anomalyco/agents-everywhere.git",
+    "url": "git+https://github.com/codity-ai/Agents-Everywhere.git",
     "directory": "packages/ui"
   },
   "publishConfig": {

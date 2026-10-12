@@ -1,0 +1,89 @@
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -1,4 +1,4 @@
+-import type { Plugin } from '@opencode-ai/plugin';
++import type { Plugin } from '@agents-everywhere/plugin';
+ /**
+  * Normalize an instance URL to `protocol//host`, falling back to the default
+  * (GITLAB_INSTANCE_URL env or gitlab.com) when the value is empty/undefined.
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -53,8 +53,7 @@
+  */
+ function debugLog(message, data) {
+     try {
+-        const homeDir = os.homedir();
+-        const logDir = path.join(homeDir, '.local', 'share', 'opencode', 'log');
++        const logDir = path.join(path.dirname(getAuthPath()), 'log');
+         // Ensure log directory exists
+         if (!fs.existsSync(logDir)) {
+             fs.mkdirSync(logDir, { recursive: true });
+@@ -74,16 +73,10 @@
+  * Get OpenCode auth file path
+  */
+ function getAuthPath() {
+-    const homeDir = os.homedir();
+-    const xdgDataHome = process.env.XDG_DATA_HOME;
+-    if (xdgDataHome) {
+-        return path.join(xdgDataHome, 'opencode', 'auth.json');
+-    }
+-    if (process.platform !== 'win32') {
+-        return path.join(homeDir, '.local', 'share', 'opencode', 'auth.json');
+-    }
+-    return path.join(homeDir, '.opencode', 'auth.json');
+-}
++    const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
++    return path.join(dataHome, 'agents-everywhere', 'auth.json');
++}
++
+ /**
+  * Save OAuth auth data to OpenCode's auth.json
+  * Workaround for OpenCode not saving the enterpriseUrl field
+@@ -110,7 +103,7 @@
+         enterpriseUrl,
+     };
+     // Write back
+-    fs.writeFileSync(authPath, JSON.stringify(authData, null, 2));
++    fs.writeFileSync(authPath, JSON.stringify(authData, null, 2), { mode: 0o600 });
+     fs.chmodSync(authPath, 0o600);
+ }
+ /**
+@@ -137,7 +130,7 @@
+         enterpriseUrl,
+     };
+     // Write back
+-    fs.writeFileSync(authPath, JSON.stringify(authData, null, 2));
++    fs.writeFileSync(authPath, JSON.stringify(authData, null, 2), { mode: 0o600 });
+     fs.chmodSync(authPath, 0o600);
+ }
+ /**
+@@ -162,7 +155,7 @@
+         }
+         const metadata = { ...(gitlab.metadata ?? {}), instanceUrl };
+         authData.gitlab = { ...gitlab, metadata };
+-        fs.writeFileSync(authPath, JSON.stringify(authData, null, 2));
++        fs.writeFileSync(authPath, JSON.stringify(authData, null, 2), { mode: 0o600 });
+         fs.chmodSync(authPath, 0o600);
+     }
+     catch {
+@@ -243,7 +236,7 @@
+                     const content = fs.readFileSync(authPath, 'utf-8');
+                     const authDataFile = JSON.parse(content);
+                     delete authDataFile.gitlab;
+-                    fs.writeFileSync(authPath, JSON.stringify(authDataFile, null, 2));
++                    fs.writeFileSync(authPath, JSON.stringify(authDataFile, null, 2), { mode: 0o600 });
+                 }
+             }
+             throw error;
+@@ -341,6 +334,9 @@
+                     },
+                 ],
+                 async authorize(inputs) {
++                    if (!process.env.GITLAB_OAUTH_CLIENT_ID) {
++                        throw new Error("Set GITLAB_OAUTH_CLIENT_ID to a GitLab OAuth application with http://127.0.0.1:8080/callback registered, or use a personal access token.");
++                    }
+                     const instanceUrl = normalizeOptionalInstanceUrl(inputs?.instanceUrl);
+                     // Normalize instance URL
+                     let normalizedUrl;

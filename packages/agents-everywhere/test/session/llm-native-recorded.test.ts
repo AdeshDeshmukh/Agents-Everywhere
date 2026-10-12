@@ -164,9 +164,11 @@ const RECORDED_SCENARIOS = [
     providerID: ProviderV2.ID.opencode,
     modelID: "gpt-5.2-codex",
     cassette: "session/native-zen-tool-loop",
+    stableID: "agents-everywhere",
     protocol: "openai-responses",
     tags: ["agents-everywhere", "zen", "native", "tool-loop"],
-    canRecord: () => Boolean(process.env.AGENTS_EVERYWHERE_RECORD_CONSOLE_TOKEN && process.env.AGENTS_EVERYWHERE_RECORD_ZEN_ORG_ID),
+    canRecord: () =>
+      Boolean(process.env.AGENTS_EVERYWHERE_RECORD_CONSOLE_TOKEN && process.env.AGENTS_EVERYWHERE_RECORD_ZEN_ORG_ID),
     config: (model) =>
       providerConfig({
         providerID: ProviderV2.ID.opencode,
@@ -199,7 +201,8 @@ const RECORDED_SCENARIOS = [
         api: "https://api.anthropic.com/v1",
         model,
         options: {
-          apiKey: envValue("AGENTS_EVERYWHERE_RECORD_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY") ?? "fixture-anthropic-key",
+          apiKey:
+            envValue("AGENTS_EVERYWHERE_RECORD_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY") ?? "fixture-anthropic-key",
           baseURL: "https://api.anthropic.com/v1",
         },
       }),
@@ -291,7 +294,10 @@ const writeConfig = (directory: string, scenario: RecordedScenario, model: Model
   Effect.promise(() =>
     Bun.write(
       path.join(directory, "agents-everywhere.json"),
-      JSON.stringify({ $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json", ...scenario.config(model) }),
+      JSON.stringify({
+        $schema: "https://raw.githubusercontent.com/codity-ai/Agents-Everywhere/main/schema/config.json",
+        ...scenario.config(model),
+      }),
     ),
   )
 

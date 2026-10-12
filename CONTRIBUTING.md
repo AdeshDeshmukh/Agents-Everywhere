@@ -4,7 +4,7 @@ Bug reports, fixes and new provider support are welcome. Open an issue before st
 
 ## Getting started
 
-Requirements: Bun 1.3+, and Node.js 18+ for the runner.
+Requirements: Bun 1.3.14 (the CI version; build scripts accept compatible newer Bun 1.x versions), and Node.js 18+ for the runner. The runner supports Linux with glibc and macOS on x64 or arm64; Windows and Alpine/musl are unsupported.
 
 ```bash
 bun install
@@ -34,6 +34,8 @@ To build a standalone engine binary for your own platform:
 
 New model providers come from [models.dev](https://github.com/anomalyco/models.dev), so a provider that is missing usually belongs there first.
 
+The GitLab and Poe authentication dependencies are patched to use this fork's plugin types. GitLab stores credentials and logs under the fork's data directory, respecting `XDG_DATA_HOME`. GitLab OAuth needs `GITLAB_OAUTH_CLIENT_ID` for an application with `http://127.0.0.1:8080/callback` registered; personal access token login does not need this variable.
+
 ## Tests
 
 Run tests from the package, never from the repository root:
@@ -42,7 +44,10 @@ Run tests from the package, never from the repository root:
 bun --cwd packages/agents-everywhere test
 bun --cwd packages/harness test
 bun --cwd packages/control test
+bun --cwd packages/http-recorder test
 ```
+
+Run `bun run typecheck` from each package you change. CI runs on every branch push and pull request, checks every workspace's types, runs lint and all package suites, exercises HTTP API coverage and authentication, verifies the HTTP recorder package, and builds and smoke-tests the native engine. Releases must pass this workflow before publishing binaries.
 
 The permission suites (`packages/agents-everywhere/test/permission/` and `test/tool/`) are the ones that matter most: each case there is an escape that has actually been tried. A change to permission handling should add a case that fails without it.
 
