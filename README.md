@@ -58,6 +58,8 @@ agents-everywhere is pre-release: no binaries or packages are published yet, so 
 
 To reach the control plane from other machines, and for what protects what, see [Running the control plane](docs/control-plane.md).
 
+For a complete example agent, standalone runner builds, preflight checks, logs and custom control-plane integration, see [Using the harness](docs/harness.md).
+
 ## Writing rules
 
 Rules come in four groups. Paths are relative to the directory the install command runs in.
