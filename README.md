@@ -40,13 +40,21 @@ agents-everywhere is pre-release: no binaries or packages are published yet, so 
 1. Build the engine and start a control plane. It prints an admin token the first time; keep it.
 
    ```bash
-   git clone https://github.com/codity-ai/Agents-Everywhere && cd agents-everywhere
+   git clone https://github.com/codity-ai/Agents-Everywhere agents-everywhere
+   cd agents-everywhere
    bun install
    ./packages/agents-everywhere/script/build.ts --single
-   ./packages/agents-everywhere/dist/agents-everywhere-linux-x64/bin/agents-everywhere control
+   target="$(bun -p 'process.platform + "-" + process.arch')"
+   "./packages/agents-everywhere/dist/agents-everywhere-${target}/bin/agents-everywhere" control
    ```
 
-   On a Mac the binary is under `agents-everywhere-darwin-arm64` or `agents-everywhere-darwin-x64`.
+   These commands work in Bash or Zsh on macOS and Linux. `--single` builds only for the platform and architecture running Bun, and `target` selects that same binary. On Apple silicon Macs the directory is `agents-everywhere-darwin-arm64`; on Intel Macs it is `agents-everywhere-darwin-x64`.
+
+   If you already built successfully on an Apple silicon Mac, run this from the repository folder without rebuilding:
+
+   ```bash
+   ./packages/agents-everywhere/dist/agents-everywhere-darwin-arm64/bin/agents-everywhere control
+   ```
 
 2. Open http://127.0.0.1:4800, sign in with the token, and create an agent: a task, a model and its API key, and the paths, commands and URLs it may use.
 
