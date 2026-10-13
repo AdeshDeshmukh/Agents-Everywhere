@@ -17,14 +17,15 @@ export type Migration = {
 
 export function apply(db: Database) {
   return lock.withPermit(
-    Effect.gen(function* () {
-      const tables = yield* db.all<{ name: string }>(
-        sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
-      )
-      if (tables.some((table) => table.name === "session")) return yield* applyOnly(db, migrations)
-      if (tables.length > 0) return yield* Effect.die("Database is not empty and has no session table")
-      yield* db.transaction((tx) =>
+    // Acquire the SQLite write lock before inspecting the schema so separate processes cannot initialize it together.
+    db.transaction(
+      (tx) =>
         Effect.gen(function* () {
+          const tables = yield* tx.all<{ name: string }>(
+            sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`,
+          )
+          if (tables.some((table) => table.name === "session")) return yield* applyOnly(tx, migrations)
+          if (tables.length > 0) return yield* Effect.die("Database is not empty and has no session table")
           yield* schema.up(tx)
           yield* tx.run(
             sql`CREATE TABLE ${sql.identifier("migration")} (id TEXT PRIMARY KEY, time_completed INTEGER NOT NULL)`,
@@ -35,8 +36,8 @@ export function apply(db: Database) {
             ),
           )
         }),
-      )
-    }),
+      { behavior: "immediate" },
+    ),
   )
 }
 

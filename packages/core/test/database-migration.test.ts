@@ -113,6 +113,25 @@ describe("DatabaseMigration", () => {
       ),
     )
   })
+  test("serializes initialization across processes for one database path", async () => {
+    await using tmp = await tmpdir()
+    const filename = path.join(tmp.path, "shared.sqlite")
+    const script = `
+      import { Effect, Layer } from "effect"
+      import { Database } from "./src/database/database"
+      await Effect.runPromise(Effect.scoped(Layer.build(Database.layerFromPath(process.argv[1]))))
+    `
+    const results = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        $`${process.execPath} -e ${script} ${filename}`
+          .cwd(fileURLToPath(new URL("..", import.meta.url)))
+          .quiet()
+          .nothrow(),
+      ),
+    )
+    for (const result of results) expect(result.exitCode, result.stderr.toString()).toBe(0)
+  }, 30_000)
+
   if (process.platform === "linux") {
     test("declared schema has no ungenerated migrations", async () => {
       const result = await $`bun ${fileURLToPath(new URL("../script/migration.ts", import.meta.url))} --check`
