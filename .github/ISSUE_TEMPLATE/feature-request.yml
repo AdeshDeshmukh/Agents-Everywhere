@@ -2,6 +2,9 @@ name: Feature request
 description: Suggest a change or a new capability
 labels: [enhancement]
 body:
+  - type: markdown
+    attributes:
+      value: Describe a useful capability and its smallest practical scope. Discuss larger changes here before implementing them. Remove credentials and private data from examples.
   - type: textarea
     id: problem
     attributes:
@@ -13,3 +16,43 @@ body:
     id: proposal
     attributes:
       label: What you would like instead
+      description: Describe the proposed behavior and a concrete example.
+    validations:
+      required: true
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Who benefits
+      description: Which contributors or users need this, and what would become easier?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What observable behavior would show that this request is complete?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and current workaround
+      description: Mention existing capabilities you tried and why they do not solve the problem.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Engine (CLI, TUI, serve)
+        - Runner (install command, harness)
+        - Control plane (API or web UI)
+        - Client, SDK or plugin
+        - Installation, build or CI
+        - Not sure
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: Existing requests
+      options:
+        - label: I searched existing issues for this feature.
+          required: true

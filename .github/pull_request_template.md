@@ -1,16 +1,26 @@
-## What and why
+## Problem and related issue
 
-<!-- What this changes and why, in your own words. Link the issue it addresses: "Fixes #123". -->
+<!-- Explain the problem and who it affects. Link the agreed issue with "Fixes #123" when this PR resolves it, or "Refs #123" for partial work. -->
+
+## Changes
+
+<!-- Describe the approach and resulting behavior. Include a before/after example when helpful. -->
 
 ## How it was verified
 
-<!-- The test you added, or how you checked it by hand. UI changes need a screenshot. -->
+<!-- List the exact commands you ran and their results, plus manual checks where relevant. Run tests from package directories. Mark checks you did not run and explain why. Include screenshots for UI changes, with credentials and private data removed. -->
+
+## Compatibility and follow-up
+
+<!-- Mention config changes, database migrations, protocol/API changes or remaining work. Write "None" if this does not apply. -->
 
 ## Checklist
 
 - [ ] One logical change, with an imperative title ("Fix symlink check on macOS")
-- [ ] Tests run from the package you changed (`bun --cwd packages/<name> test`) pass
-- [ ] A change to permission handling adds a case under `test/permission/` or `test/tool/` that fails without it
+- [ ] Relevant package tests and typechecks are recorded above, with unrun checks identified
+- [ ] Permission changes include a regression case under `test/permission/` or `test/tool/`, or this does not apply
+- [ ] Public Protocol or Server HttpApi changes regenerate the client with `bun run generate` from `packages/client`, or this does not apply
 - [ ] No unrelated formatting or refactors in the diff
+- [ ] No credentials or private data in the diff, logs or screenshots
 
 <!-- Found a vulnerability? Do not describe it here. Report it privately: see SECURITY.md. -->

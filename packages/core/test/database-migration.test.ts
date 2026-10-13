@@ -88,6 +88,19 @@ describe("DatabaseMigration", () => {
     )
   })
 
+  test("imports named legacy journal entries without replaying completed migrations", async () => {
+    await run(
+      Effect.gen(function* () {
+        const db = yield* makeDb
+        yield* db.run(sql`CREATE TABLE __drizzle_migrations (name text)`)
+        yield* db.run(sql`INSERT INTO __drizzle_migrations (name) VALUES (${workspaceNameMigration.id})`)
+        yield* DatabaseMigration.applyOnly(db, [workspaceNameMigration])
+        yield* DatabaseMigration.applyOnly(db, [workspaceNameMigration])
+        expect(yield* db.all(sql`SELECT id FROM migration`)).toEqual([{ id: workspaceNameMigration.id }])
+      }),
+    )
+  })
+
   test("rejects unknown legacy Drizzle journal timestamps instead of guessing completed migrations", async () => {
     await expect(
       run(
@@ -113,6 +126,111 @@ describe("DatabaseMigration", () => {
       ),
     )
   })
+  test("serializes initialization across processes for one database path", async () => {
+    await using tmp = await tmpdir()
+    const filename = path.join(tmp.path, "shared.sqlite")
+    const script = `
+      import { Effect, Layer } from "effect"
+      import { Database } from "./src/database/database"
+      await Effect.runPromise(Effect.scoped(Layer.build(Database.layerFromPath(process.argv[1]))))
+    `
+    const results = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        $`${process.execPath} -e ${script} ${filename}`
+          .cwd(fileURLToPath(new URL("..", import.meta.url)))
+          .quiet()
+          .nothrow(),
+      ),
+    )
+    for (const result of results) expect(result.exitCode, result.stderr.toString()).toBe(0)
+  }, 30_000)
+
+  test("upgrades an existing database once across concurrent processes and preserves session data", async () => {
+    await using tmp = await tmpdir()
+    const filename = path.join(tmp.path, "upgrade.sqlite")
+    const sqlite = await import("bun:sqlite")
+    await Effect.runPromise(Effect.scoped(Layer.build(Database.layerFromPath(filename))))
+    using seed = new sqlite.Database(filename)
+    seed.run("ALTER TABLE session DROP COLUMN metadata")
+    seed.run("DELETE FROM migration WHERE id = ?", [sessionMetadataMigration.id])
+    seed.run(
+      "INSERT INTO project (id, worktree, time_created, time_updated, sandboxes) VALUES ('global', '/project', 1, 1, '[]')",
+    )
+    seed.run(
+      "INSERT INTO session (id, project_id, slug, directory, title, version, time_created, time_updated) VALUES ('existing', 'global', 'existing', '/project', 'Preserved', 'test', 1, 1)",
+    )
+    const script = `
+      import { Effect, Layer } from "effect"
+      import { Database } from "./src/database/database"
+      await Effect.runPromise(Effect.scoped(Layer.build(Database.layerFromPath(process.argv[1]))))
+    `
+    const results = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        $`${process.execPath} -e ${script} ${filename}`
+          .cwd(fileURLToPath(new URL("..", import.meta.url)))
+          .quiet()
+          .nothrow(),
+      ),
+    )
+    for (const result of results) expect(result.exitCode, result.stderr.toString()).toBe(0)
+    expect(seed.query("SELECT title, metadata FROM session WHERE id = 'existing'").get()).toEqual({
+      title: "Preserved",
+      metadata: null,
+    })
+    expect(seed.query("SELECT count(*) AS count FROM migration WHERE id = ?").get(sessionMetadataMigration.id)).toEqual(
+      { count: 1 },
+    )
+    expect(seed.query("SELECT count(*) AS count FROM migration").get()).toEqual({ count: migrations.length })
+  }, 30_000)
+
+  test("does not acquire a write lock when the database is already current", async () => {
+    await using tmp = await tmpdir()
+    const filename = path.join(tmp.path, "current.sqlite")
+    const sqlite = await import("bun:sqlite")
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const db = yield* makeDb
+        yield* DatabaseMigration.apply(db)
+        using writer = new sqlite.Database(filename)
+        writer.run("BEGIN IMMEDIATE")
+        try {
+          yield* DatabaseMigration.apply(db)
+          expect(yield* db.get(sql`SELECT count(*) AS count FROM migration`)).toEqual({ count: migrations.length })
+        } finally {
+          writer.run("ROLLBACK")
+        }
+      }).pipe(Effect.provide(SqliteClient.layer({ filename })), Effect.scoped),
+    )
+  })
+
+  test("rolls back a failed upgrade and leaves earlier migrations committed", async () => {
+    await run(
+      Effect.gen(function* () {
+        const db = yield* makeDb
+        yield* DatabaseMigration.apply(db)
+        const first: DatabaseMigration.Migration = {
+          id: "test-success",
+          up: (tx) => tx.run(sql`CREATE TABLE committed_upgrade (id text)`).pipe(Effect.asVoid),
+        }
+        const second: DatabaseMigration.Migration = {
+          id: "test-failure",
+          up: (tx) =>
+            Effect.gen(function* () {
+              yield* tx.run(sql`CREATE TABLE failed_upgrade (id text)`)
+              return yield* Effect.fail(new Error("Upgrade failed"))
+            }),
+        }
+        const result = yield* DatabaseMigration.applyOnly(db, [first, second]).pipe(Effect.exit)
+        expect(result._tag).toBe("Failure")
+        expect(yield* db.get(sql`SELECT name FROM sqlite_master WHERE name = 'committed_upgrade'`)).toEqual({
+          name: "committed_upgrade",
+        })
+        expect(yield* db.get(sql`SELECT name FROM sqlite_master WHERE name = 'failed_upgrade'`)).toBeUndefined()
+        expect(yield* db.all(sql`SELECT id FROM migration WHERE id LIKE 'test-%'`)).toEqual([{ id: first.id }])
+      }),
+    )
+  })
+
   if (process.platform === "linux") {
     test("declared schema has no ungenerated migrations", async () => {
       const result = await $`bun ${fileURLToPath(new URL("../script/migration.ts", import.meta.url))} --check`

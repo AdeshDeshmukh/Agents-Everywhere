@@ -7,11 +7,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/anomalyco/agents-everywhere.git",
+    "url": "git+https://github.com/codity-ai/Agents-Everywhere.git",
     "directory": "packages/http-recorder"
   },
-  "homepage": "https://github.com/anomalyco/agents-everywhere/tree/dev/packages/http-recorder",
-  "bugs": "https://github.com/anomalyco/agents-everywhere/issues",
+  "homepage": "https://github.com/codity-ai/Agents-Everywhere/tree/main/packages/http-recorder",
+  "bugs": "https://github.com/codity-ai/Agents-Everywhere/issues",
   "keywords": [
     "effect",
     "http",

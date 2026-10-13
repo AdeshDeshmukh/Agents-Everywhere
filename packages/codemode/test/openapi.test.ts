@@ -15,7 +15,7 @@ type Recorded = {
 }
 
 const agentsEverywhereSpec = async (): Promise<Document> => {
-  return Bun.file(new URL("./fixtures/agents-everywhere-v2-openapi.json", import.meta.url)).json() as Promise<Document>
+  return Bun.file(new URL("./fixtures/opencode-v2-openapi.json", import.meta.url)).json() as Promise<Document>
 }
 
 const happyPathSpec = async (): Promise<Document> => {
@@ -378,7 +378,7 @@ describe("OpenAPI.fromSpec", () => {
       runtime
         .execute(
           `
-        return await tools.$codemode.search({ query: "global health", namespace: "agents-everywhere", limit: 1 })
+        return await tools.$codemode.search({ query: "global health", namespace: "agentsEverywhere", limit: 1 })
       `,
         )
         .pipe(Effect.provide(layer)),

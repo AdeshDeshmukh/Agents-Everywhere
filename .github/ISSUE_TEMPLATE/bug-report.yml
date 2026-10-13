@@ -2,17 +2,28 @@ name: Bug report
 description: Something in the engine, runner or control plane does not work as it should
 labels: [bug]
 body:
+  - type: markdown
+    attributes:
+      value: Describe a reproducible problem. Remove credentials and private data from logs and screenshots. Report vulnerabilities privately through SECURITY.md.
   - type: textarea
     id: description
     attributes:
       label: What happened
-      description: What you did, what you expected, and what happened instead. Paste errors and logs as text.
+      description: What you did and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen with the same setup?
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
       label: Steps to reproduce
+      description: Include the smallest commands or configuration that reproduce the problem, with all credentials removed.
     validations:
       required: true
   - type: dropdown
@@ -23,6 +34,8 @@ body:
         - Engine (CLI, TUI, serve)
         - Runner (install command, harness)
         - Control plane (API or web UI)
+        - Client, SDK or plugin
+        - Installation, build or CI
         - Not sure
     validations:
       required: true
@@ -31,11 +44,35 @@ body:
     attributes:
       label: Version
       description: Output of `agents-everywhere --version`, or the commit you built from.
+    validations:
+      required: true
   - type: input
     id: os
     attributes:
       label: Operating system
+      description: Include the OS version and architecture, such as Ubuntu 24.04 x64 or macOS arm64.
+    validations:
+      required: true
+  - type: input
+    id: runtimes
+    attributes:
+      label: Bun and Node.js versions
+      description: Output of bun --version and node --version, if available.
   - type: input
     id: terminal
     attributes:
       label: Terminal
+      description: For web UI problems, include your browser and version instead.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste only the relevant output. Remove API keys, tokens, install commands and private transcript content.
+      render: text
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: Existing reports
+      options:
+        - label: I searched existing issues for this problem.
+          required: true

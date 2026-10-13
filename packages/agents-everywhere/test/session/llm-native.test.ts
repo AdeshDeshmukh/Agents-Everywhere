@@ -360,7 +360,7 @@ describe("session.llm-native.request", () => {
     const compatible = LLMNative.model({
       model: {
         ...baseModel,
-        providerID: ProviderV2.ID.make("agents-everywhere"),
+        providerID: ProviderV2.ID.opencode,
         api: { ...baseModel.api, url: "https://ai.example.test/v1", npm: "@ai-sdk/openai-compatible" },
       },
       apiKey: "test-key",
@@ -394,8 +394,8 @@ describe("session.llm-native.request", () => {
     })
     expect(
       LLMNativeRuntime.status({
-        model: { ...baseModel, providerID: ProviderV2.ID.make("agents-everywhere") },
-        provider: { ...providerInfo, id: ProviderV2.ID.make("agents-everywhere") },
+        model: { ...baseModel, providerID: ProviderV2.ID.opencode },
+        provider: { ...providerInfo, id: ProviderV2.ID.opencode },
         auth: undefined,
       }),
     ).toMatchObject({
@@ -406,10 +406,10 @@ describe("session.llm-native.request", () => {
       LLMNativeRuntime.status({
         model: {
           ...baseModel,
-          providerID: ProviderV2.ID.make("agents-everywhere"),
+          providerID: ProviderV2.ID.opencode,
           api: { ...baseModel.api, npm: "@ai-sdk/openai-compatible" },
         },
-        provider: { ...providerInfo, id: ProviderV2.ID.make("agents-everywhere") },
+        provider: { ...providerInfo, id: ProviderV2.ID.opencode },
         auth: undefined,
       }),
     ).toMatchObject({
@@ -422,7 +422,7 @@ describe("session.llm-native.request", () => {
         provider: { ...providerInfo, id: ProviderV2.ID.make("google") },
         auth: undefined,
       }),
-    ).toEqual({ type: "unsupported", reason: "provider is not openai, agents-everywhere, or anthropic" })
+    ).toEqual({ type: "unsupported", reason: "provider is not openai, opencode, or anthropic" })
     expect(
       LLMNativeRuntime.status({
         model: baseModel,
@@ -478,10 +478,10 @@ describe("session.llm-native.request", () => {
   test("prefers console provider api key over stored agents-everywhere auth", () => {
     expect(
       LLMNativeRuntime.status({
-        model: { ...baseModel, providerID: ProviderV2.ID.make("agents-everywhere") },
+        model: { ...baseModel, providerID: ProviderV2.ID.opencode },
         provider: {
           ...providerInfo,
-          id: ProviderV2.ID.make("agents-everywhere"),
+          id: ProviderV2.ID.opencode,
           options: { apiKey: "console-token" },
           key: "zen-token",
         },

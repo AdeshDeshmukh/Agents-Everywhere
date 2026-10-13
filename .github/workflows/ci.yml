@@ -2,8 +2,9 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -11,7 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -19,26 +20,68 @@ jobs:
           bun-version: 1.3.14
       - uses: actions/setup-node@v4
         with:
-          # The oldest Node the runner supports; the bundle test runs it there.
-          node-version: 18
+          # Native dependency installation requires a current Node 22 runtime.
+          node-version: 22
+          check-latest: true
       - run: bun install --frozen-lockfile
+
+      - name: Typecheck every workspace and lint
+        run: |
+          for package in packages/* packages/sdk/js; do
+            if test -f "$package/package.json" && bun -e 'process.exit(JSON.parse(await Bun.file(process.argv[1]).text()).scripts?.typecheck ? 0 : 1)' "$package/package.json"; then
+              (cd "$package" && bun run typecheck)
+            fi
+          done
+          bun run lint
+
+      - uses: actions/setup-node@v4
+        with:
+          # Verify the runner bundle on its oldest supported Node version.
+          node-version: 18
 
       - name: Runner
         working-directory: packages/harness
-        run: |
-          bun run typecheck
-          bun run test
+        run: bun run test
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Control plane and runner-protocol conformance
         working-directory: packages/control
-        run: |
-          bun run typecheck
-          bun run test
+        run: bun run test
 
-      - name: Engine permission and tool suites
+      - name: Full engine suite
         working-directory: packages/agents-everywhere
-        run: bun test test/permission test/tool
+        run: bun run test
+
+      - name: HTTP API coverage, authentication and integration
+        working-directory: packages/agents-everywhere
+        run: bun run test:httpapi
+
+      - name: HTTP recording and secret redaction
+        working-directory: packages/http-recorder
+        run: |
+          bun run test
+          bun run verify:package
 
       - name: Core
         working-directory: packages/core
-        run: bun test
+        run: bun run test
+
+      - name: Supporting workspace suites
+        run: |
+          for package in client codemode effect-drizzle-sqlite httpapi-codegen llm tui ui sdk/js; do
+            (cd "packages/$package" && bun run test)
+          done
+          for package in protocol schema; do
+            (cd "packages/$package" && bun test --timeout 30000 --only-failures)
+          done
+
+      - name: Generated client consistency
+        working-directory: packages/client
+        run: bun run check:generated
+
+      - name: Build and smoke-test the native engine
+        working-directory: packages/agents-everywhere
+        run: bun run script/build.ts --single --skip-install

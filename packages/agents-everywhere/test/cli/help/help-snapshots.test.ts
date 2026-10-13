@@ -53,13 +53,12 @@ const TOP_LEVEL = [
   "upgrade",
   "uninstall",
   "serve",
+  "control",
   "web",
   "models",
   "stats",
   "export",
   "import",
-  "github",
-  "pr",
   "session",
   "plugin",
   "db",
@@ -80,8 +79,6 @@ const SUBCOMMANDS = [
   ["agent", "list"],
   ["session", "list"],
   ["session", "delete"],
-  ["github", "install"],
-  ["github", "run"],
   ["db", "path"],
 ] as const
 
@@ -129,6 +126,7 @@ describe("agents-everywhere CLI help-text snapshots", () => {
           // yargs writes --help to stderr, not stdout. Snapshotting stderr
           // means our test catches the help body; stdout for these commands
           // is expected to be empty.
+          expect(result.stderr.trimStart()).toStartWith(`agents-everywhere ${argv.join(" ")}`)
           expect(normalize(result.stderr)).toMatchSnapshot(`agents-everywhere ${argv.join(" ")} --help`)
         }
         if (failures.length > 0) {

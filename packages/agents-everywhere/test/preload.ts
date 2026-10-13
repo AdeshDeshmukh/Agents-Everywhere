@@ -57,6 +57,7 @@ await fs.writeFile(path.join(cacheDir, "version"), "14")
 // Clear provider and server auth env vars to ensure clean test state
 delete process.env["ANTHROPIC_API_KEY"]
 delete process.env["OPENAI_API_KEY"]
+delete process.env["OPENAI_BASE_URL"]
 delete process.env["GOOGLE_API_KEY"]
 delete process.env["GOOGLE_GENERATIVE_AI_API_KEY"]
 delete process.env["AZURE_OPENAI_API_KEY"]
