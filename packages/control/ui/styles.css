@@ -350,6 +350,9 @@ a:hover {
   flex: none;
 }
 .brand-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.005em;
@@ -358,6 +361,7 @@ a:hover {
 
 .topbar-actions {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   gap: var(--space-sm);
 }
@@ -433,6 +437,14 @@ main:focus {
   background: var(--bg-inset);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+}
+
+pre.well {
+  max-width: 100%;
+  overflow: auto;
+  padding: var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
 }
 
 .section-head {
@@ -529,6 +541,9 @@ main:focus {
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+}
+.btn-primary:disabled {
+  filter: grayscale(1);
 }
 .btn-primary:active:not(:disabled) {
   background: var(--accent-active);

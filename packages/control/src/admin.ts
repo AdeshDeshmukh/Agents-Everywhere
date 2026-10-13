@@ -5,20 +5,23 @@
  */
 import { z } from "zod"
 import {
+  AGENT_DEFAULT_FIELDS,
+  configuredRules,
+  ENV_VAR_NAME,
+  MAX_CONFIG_YAML_BYTES,
+  parseGlobalYaml,
+  Permission,
+} from "./configuration"
+import {
   DECISIONS,
   LIVE_RUN_STATUSES,
   OS_SHELLS,
-  PERMISSION_ACCESS,
-  PERMISSION_EFFECTS,
-  PERMISSION_KINDS,
-  PERMISSION_MODES,
   SECRET_PROVIDERS,
   TERMINAL_RUN_STATUSES,
   type Decision,
 } from "@agents-everywhere/harness/protocol"
 import { createBootstrapToken, seal, type Keys } from "./crypto"
 import { HttpError, json, parseJson, readBody } from "./http"
-import { MODEL_PROVIDER_IDS } from "./model-providers"
 import {
   dedupeRules,
   defaultDenyRules,
@@ -34,15 +37,7 @@ const MAX_ADMIN_BODY_BYTES = 1024 * 1024
 const RUNS_SHOWN = 50
 const EVENTS_PAGE = 1000
 
-const ENV_VAR_NAME = /^[A-Z_][A-Z0-9_]*$/
 const AWS_SECRET_ARN = /^arn:aws:secretsmanager:[a-z0-9-]+:\d{12}:secret:.+$/
-
-const Permission = z.object({
-  path_pattern: z.string().trim().min(1).max(1000),
-  access: z.enum(PERMISSION_ACCESS),
-  kind: z.enum(PERMISSION_KINDS).default("filesystem"),
-  effect: z.enum(PERMISSION_EFFECTS).default("allow"),
-})
 
 const Secret = z
   .object({
@@ -65,24 +60,26 @@ const Secret = z
 
 const AgentFields = {
   label: z.string().trim().min(1).max(255),
-  location_label: z.string().trim().max(120).nullable().optional(),
-  task: z.string().trim().min(1).max(20_000),
-  model_provider: z.enum(MODEL_PROVIDER_IDS),
-  model_name: z.string().trim().min(1).max(200),
+  task: AGENT_DEFAULT_FIELDS.task,
+  location_label: AGENT_DEFAULT_FIELDS.location_label.optional(),
+  model_provider: AGENT_DEFAULT_FIELDS.model_provider,
+  model_name: AGENT_DEFAULT_FIELDS.model_name,
   llm_api_key: z.string().min(1).max(4096).optional(),
-  interactive: z.boolean().optional(),
-  permission_mode: z.enum(PERMISSION_MODES).optional(),
-  permission_request_timeout_seconds: z.number().int().min(30).max(86_400).optional(),
-  declared_env_vars: z
-    .array(z.string().regex(ENV_VAR_NAME, "must be an environment variable name"))
-    .max(100)
-    .optional(),
+  interactive: AGENT_DEFAULT_FIELDS.interactive.optional(),
+  permission_mode: AGENT_DEFAULT_FIELDS.permission_mode.optional(),
+  permission_request_timeout_seconds: AGENT_DEFAULT_FIELDS.permission_request_timeout_seconds.optional(),
+  declared_env_vars: AGENT_DEFAULT_FIELDS.declared_env_vars.optional(),
   secrets: z.array(Secret).max(50).optional(),
+  rejection_yaml: z.string().max(MAX_CONFIG_YAML_BYTES).optional(),
+  use_global_config: z.boolean().optional(),
 }
 
 const CreateAgent = z.object({
   ...AgentFields,
-  os_shell: z.enum(OS_SHELLS).default("linux_bash"),
+  task: AgentFields.task.optional(),
+  model_provider: AgentFields.model_provider.optional(),
+  model_name: AgentFields.model_name.optional(),
+  os_shell: z.enum(OS_SHELLS).optional(),
   permissions: z.array(Permission).default([]),
   acknowledge_bash_gateways: z.boolean().default(false),
   // The standard deny rules, seeded as real, editable rows.
@@ -102,6 +99,26 @@ const UpdateAgent = z.object({
   permission_request_timeout_seconds: AgentFields.permission_request_timeout_seconds,
   declared_env_vars: AgentFields.declared_env_vars,
   secrets: AgentFields.secrets,
+  rejection_yaml: AgentFields.rejection_yaml,
+  use_global_config: AgentFields.use_global_config,
+  permissions: z.array(Permission).optional(),
+  acknowledge_bash_gateways: z.boolean().default(false),
+})
+
+const GlobalConfigBody = z.object({
+  yaml: z.string().max(MAX_CONFIG_YAML_BYTES),
+  revision: z
+    .number()
+    .int()
+    .min(0)
+    .max(Number.MAX_SAFE_INTEGER - 1),
+  acknowledge_bash_gateways: z.boolean().default(false),
+})
+
+const RequiredCreationFields = z.object({
+  task: AGENT_DEFAULT_FIELDS.task,
+  model_provider: AGENT_DEFAULT_FIELDS.model_provider,
+  model_name: AGENT_DEFAULT_FIELDS.model_name,
 })
 
 const ReplacePermissions = z.object({
@@ -161,6 +178,8 @@ function agentOut(agent: AgentRow) {
     permission_mode: agent.permission_mode,
     permission_request_timeout_seconds: agent.permission_request_timeout_seconds,
     declared_env_vars: parseJson<string[]>(agent.declared_env_vars, []),
+    rejection_yaml: agent.rejection_yaml,
+    use_global_config: agent.use_global_config === 1,
     created_at: agent.created_at,
     updated_at: agent.updated_at,
   }
@@ -192,6 +211,7 @@ export class AdminApi {
     return {
       ...agentOut(agent),
       permissions: this.store.rules(agent.id),
+      effective_permissions: this.store.effectiveRules(agent),
       secrets: this.store.secrets(agent.id).map((s) => ({
         id: s.id,
         provider: s.provider,
@@ -209,6 +229,25 @@ export class AdminApi {
 
   loginBody = (req: Request) => readBody(req, LoginBody, 4096)
 
+  getGlobalConfig = (): Response => {
+    const config = this.store.globalConfig()
+    return json({ ...config, document: parseGlobalYaml(config.yaml) })
+  }
+
+  saveGlobalConfig = async (req: Request): Promise<Response> => {
+    const body = await readBody(req, GlobalConfigBody, MAX_ADMIN_BODY_BYTES)
+    const document = policy(() => parseGlobalYaml(body.yaml))
+    policy(() => validatePermissions(document.permissions, body.acknowledge_bash_gateways))
+    for (const agent of this.store
+      .listAgents()
+      .filter((agent) => agent.use_global_config && agent.status !== "revoked")) {
+      policy(() => configuredRules(this.store.rules(agent.id), agent.rejection_yaml, document.permissions))
+    }
+    if (!this.store.saveGlobalConfig(body.yaml, body.revision))
+      throw new HttpError(409, "Global config changed. Reload it before saving.")
+    return this.getGlobalConfig()
+  }
+
   listAgents = async (): Promise<Response> =>
     json(
       this.store.listAgents().map((a) => ({
@@ -225,22 +264,38 @@ export class AdminApi {
 
   createAgent = async (req: Request): Promise<Response> => {
     const body = await readBody(req, CreateAgent, MAX_ADMIN_BODY_BYTES)
+    const global = body.use_global_config ? parseGlobalYaml(this.store.globalConfig().yaml) : null
+    const fields = {
+      ...global?.defaults,
+      ...Object.fromEntries(Object.entries(body).filter(([, value]) => value !== undefined)),
+    }
+    const required = RequiredCreationFields.safeParse(fields)
+    if (!required.success)
+      throw new HttpError(
+        422,
+        `${required.error.issues[0].path.join(".")}: required or invalid; set it on the agent or in the selected global config`,
+      )
     // Seeded first so an explicit row for the same pattern wins the dedupe.
     const requested: Rule[] = [...(body.seed_default_denies ? defaultDenyRules() : []), ...body.permissions.map(toRule)]
-    policy(() => validatePermissions(requested, body.acknowledge_bash_gateways))
+    const effective = policy(() => configuredRules(requested, body.rejection_yaml ?? "", global?.permissions))
+    policy(() => validatePermissions(effective, body.acknowledge_bash_gateways))
+    const defaults = global?.defaults ?? {}
     const id = this.store.createAgent(
       {
         label: body.label,
-        os_shell: body.os_shell,
-        location_label: body.location_label ?? null,
-        task: body.task,
-        model_provider: body.model_provider,
-        model_name: body.model_name,
+        os_shell: body.os_shell ?? defaults.os_shell ?? "linux_bash",
+        location_label: body.location_label !== undefined ? body.location_label : (defaults.location_label ?? null),
+        task: required.data.task,
+        model_provider: required.data.model_provider,
+        model_name: required.data.model_name,
         llm_api_key_sealed: body.llm_api_key ? seal(this.keys, body.llm_api_key) : null,
-        interactive: body.interactive ?? false,
-        permission_mode: body.permission_mode ?? "strict",
-        permission_request_timeout_seconds: body.permission_request_timeout_seconds ?? 900,
-        declared_env_vars: body.declared_env_vars ?? [],
+        interactive: body.interactive ?? defaults.interactive ?? false,
+        permission_mode: body.permission_mode ?? defaults.permission_mode ?? "strict",
+        permission_request_timeout_seconds:
+          body.permission_request_timeout_seconds ?? defaults.permission_request_timeout_seconds ?? 900,
+        declared_env_vars: body.declared_env_vars ?? defaults.declared_env_vars ?? [],
+        rejection_yaml: body.rejection_yaml ?? "",
+        use_global_config: body.use_global_config ?? false,
       },
       dedupeRules(requested),
       toSecretInputs(body.secrets),
@@ -256,6 +311,14 @@ export class AdminApi {
     if (agent.status === "revoked") throw new HttpError(409, "Cannot edit a revoked agent")
     const body = await readBody(req, UpdateAgent, MAX_ADMIN_BODY_BYTES)
     if (body.llm_api_key && body.clear_llm_api_key) throw new HttpError(422, "Set a new key or clear it, not both")
+    const selected = body.use_global_config ?? agent.use_global_config === 1
+    const global = selected ? parseGlobalYaml(this.store.globalConfig().yaml).permissions : []
+    const rejection = body.rejection_yaml ?? agent.rejection_yaml
+    const rules = body.permissions?.map(toRule) ?? this.store.rules(id)
+    const effective = policy(() => configuredRules(rules, rejection, global))
+    if (body.permissions || body.rejection_yaml !== undefined || body.use_global_config !== undefined) {
+      policy(() => validatePermissions(effective, body.acknowledge_bash_gateways))
+    }
     this.store.transaction(() => {
       this.store.updateAgent(id, {
         label: body.label,
@@ -269,8 +332,11 @@ export class AdminApi {
         permission_mode: body.permission_mode,
         permission_request_timeout_seconds: body.permission_request_timeout_seconds,
         declared_env_vars: body.declared_env_vars,
+        rejection_yaml: body.rejection_yaml,
+        use_global_config: body.use_global_config,
       })
       if (body.secrets) this.store.replaceSecrets(id, toSecretInputs(body.secrets))
+      if (body.permissions) this.store.replaceRules(id, dedupeRules(rules))
     })
     return json(this.detail(this.store.getAgent(id)!))
   }
@@ -281,7 +347,9 @@ export class AdminApi {
     if (agent.status === "revoked") throw new HttpError(409, "Cannot edit the permissions of a revoked agent")
     const body = await readBody(req, ReplacePermissions, MAX_ADMIN_BODY_BYTES)
     const rules = body.permissions.map(toRule)
-    policy(() => validatePermissions(rules, body.acknowledge_bash_gateways))
+    const global = agent.use_global_config ? parseGlobalYaml(this.store.globalConfig().yaml).permissions : []
+    const effective = policy(() => configuredRules(rules, agent.rejection_yaml, global))
+    policy(() => validatePermissions(effective, body.acknowledge_bash_gateways))
     this.store.replaceRules(id, dedupeRules(rules))
     return json(this.detail(this.store.getAgent(id)!))
   }
@@ -386,7 +454,7 @@ export class AdminApi {
 
     const permanent =
       decision === "approved_permanent"
-        ? policy(() => permanentRulesFor(row.permission, parseJson(row.patterns, []), this.store.rules(agent.id)))
+        ? policy(() => permanentRulesFor(row.permission, parseJson(row.patterns, []), this.store.effectiveRules(agent)))
         : []
 
     // Claimed atomically: two people clicking at once must not produce two

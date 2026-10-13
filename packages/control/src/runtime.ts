@@ -128,7 +128,7 @@ export class RuntimeApi {
       run_token: runToken.token,
       run_token_expires_at: runToken.expiresAt.toISOString(),
       task: agent.task,
-      permissions: this.store.rules(agent.id),
+      permissions: this.store.effectiveRules(agent),
       secrets: this.store.secrets(agent.id).map((s) => ({
         secret_arn: s.reference,
         key_to_env_var: parseJson(s.key_to_env_var, {}),

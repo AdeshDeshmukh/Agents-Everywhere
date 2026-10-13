@@ -1,5 +1,6 @@
 /** The admin API, with the session's CSRF token on everything that changes state. */
 let csrfToken = ""
+export const MAX_YAML_LENGTH = 64 * 1024
 
 export class ApiError extends Error {
   constructor(
@@ -88,10 +89,20 @@ export interface Agent extends AgentSummary {
   permission_request_timeout_seconds: number
   declared_env_vars: string[]
   permissions: Rule[]
+  effective_permissions: Rule[]
+  rejection_yaml: string
+  use_global_config: boolean
   secrets: Array<Secret & { id: string }>
   runs: Run[]
   total_tokens_in: number
   total_tokens_out: number
+}
+
+export interface GlobalConfig {
+  yaml: string
+  revision: number
+  updated_at: string | null
+  document: import("../src/configuration").GlobalDocument
 }
 
 export interface PermissionRequest {

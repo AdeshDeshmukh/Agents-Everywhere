@@ -1,7 +1,7 @@
 import { MODEL_PROVIDERS, type ModelProviderId } from "../../src/model-providers"
 import type { ModelOption } from "../../src/model-catalog"
 import { defaultDenyRules, isBashGateway } from "../../src/policy"
-import { api, ApiError, type Agent, type Rule, type Secret } from "../api"
+import { api, ApiError, MAX_YAML_LENGTH, type Agent, type GlobalConfig, type Rule, type Secret } from "../api"
 import { h, replace, toast } from "../dom"
 import { icon, type IconName } from "../icons"
 import { select, type SelectOption } from "../select"
@@ -101,6 +101,8 @@ function segmented<T extends string>(
 export async function renderForm(main: HTMLElement, agentId?: string) {
   const agent = agentId ? await api.get<Agent>(`/api/agents/${agentId}`) : null
   const editing = agent !== null
+  let globalConfig = await api.get<GlobalConfig>("/api/config/global")
+  const dirtyDefaults = new Set<keyof GlobalConfig["document"]["defaults"]>()
 
   // New agents start with the standard refusals as real, editable rules.
   let rules: Rule[] = agent ? [...agent.permissions] : defaultDenyRules().map((r) => ({ ...r }))
@@ -130,9 +132,33 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
       { value: "linux_bash", text: "Linux", icon: "terminal", sub: "bash" },
       { value: "macos_zsh", text: "macOS", icon: "monitor", sub: "zsh" },
     ],
-    (v) => (osShell = v),
+    (v) => { osShell = v; dirtyDefaults.add("os_shell") },
   )
   if (editing) osControl.querySelectorAll("input").forEach((i) => ((i as HTMLInputElement).disabled = true))
+
+  const rejection = h("textarea", { id: "agent-rejection-yaml", class: "input input-mono", rows: 8, maxlength: MAX_YAML_LENGTH, spellcheck: "false", placeholder: "version: 1\npermissions:\n  - path_pattern: ./secrets\n    kind: filesystem\n    access: read\n    effect: deny\n" }, agent?.rejection_yaml ?? "")
+  const useGlobal = h("input", { type: "checkbox", checked: agent?.use_global_config ?? false })
+  const globalNote = h("p", { class: "hint", role: "status" })
+  const globalPreview = h("pre", { class: "well", tabindex: 0, "aria-label": "Saved global YAML" }, globalConfig.yaml)
+  const drawGlobalNote = () => {
+    replace(globalNote, useGlobal.checked
+      ? `Using revision ${globalConfig.revision}: ${globalConfig.document.permissions.length} shared permission rules. ${editing ? "Existing agent values are kept." : "Defaults fill fields you have not edited."}`
+      : "Global config is not selected. This agent uses its own settings and rules.")
+    replace(globalPreview, globalConfig.yaml)
+  }
+  const reloadGlobal = button("Reload global config", { onclick: async () => {
+    reloadGlobal.disabled = true
+    try {
+      globalConfig = await api.get<GlobalConfig>("/api/config/global")
+      applyGlobalDefaults()
+      drawGlobalNote()
+      refreshGateways()
+    } catch (failure) {
+      toast(failure instanceof ApiError ? failure.message : "Could not reload global config. Try again.")
+    } finally {
+      reloadGlobal.disabled = false
+    }
+  } })
 
   // ── Access ──
   const ackGateways = h("input", { type: "checkbox" })
@@ -146,7 +172,8 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
   const groupLists = new Map<RuleGroupId, HTMLElement>()
 
   const refreshGateways = () => {
-    const gateways = rules.filter((r) => r.kind === "bash_command" && r.effect === "allow" && isBashGateway(r.path_pattern))
+    const combined = [...rules, ...(useGlobal.checked ? globalConfig.document.permissions : [])]
+    const gateways = combined.filter((r) => r.kind === "bash_command" && r.effect === "allow" && isBashGateway(r.path_pattern))
     gatewayNotice.hidden = ackField.hidden = gateways.length === 0
     replace(
       gatewayNotice,
@@ -340,6 +367,8 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
     options: MODEL_PROVIDERS.map((p) => ({ value: p.id, label: p.label })),
     onChange: (v) => {
       modelProvider = v
+      dirtyDefaults.add("model_provider")
+      dirtyDefaults.add("model_name")
       // Model ids are not shared across providers, so the old pick cannot carry over.
       modelName = ""
       void loadModels()
@@ -351,6 +380,8 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
     options: [],
     onChange: (v) => {
       modelName = v
+      dirtyDefaults.add("model_provider")
+      dirtyDefaults.add("model_name")
       refreshFooter()
     },
     placeholder: "Loading models",
@@ -404,7 +435,7 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
   const clearKey = h("input", { type: "checkbox" })
 
   // ── Behaviour ──
-  const timeout = h("input", { class: "input input-narrow", type: "number", min: 1, max: 1440, value: Math.round((agent?.permission_request_timeout_seconds ?? 900) / 60), "aria-label": "Minutes to wait" })
+  const timeout = h("input", { class: "input input-narrow", type: "number", min: 0.5, max: 1440, step: "any", value: (agent?.permission_request_timeout_seconds ?? 900) / 60, "aria-label": "Minutes to wait" })
   const timeoutRow = h("label", { class: "inline hint" }, "Refuse after", timeout, "minutes if nobody answers")
   timeoutRow.hidden = mode !== "request"
   const modeNote = h("p", { class: "segment-note" })
@@ -441,6 +472,39 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
     submit.disabled = note.endsWith("to deploy it.")
   }
   for (const el of [name, task, key]) el.addEventListener("input", refreshFooter)
+  for (const [element, field] of [[task, "task"], [where, "location_label"], [envVars, "declared_env_vars"], [timeout, "permission_request_timeout_seconds"]] as const) {
+    element.addEventListener("input", () => dirtyDefaults.add(field))
+  }
+  modelTyped.addEventListener("input", () => { dirtyDefaults.add("model_provider"); dirtyDefaults.add("model_name") })
+
+  const applyGlobalDefaults = () => {
+    if (editing) return
+    const defaults = useGlobal.checked ? globalConfig.document.defaults : {}
+    if (!dirtyDefaults.has("task")) task.value = defaults.task ?? ""
+    if (!dirtyDefaults.has("location_label")) where.value = defaults.location_label ?? ""
+    if (!dirtyDefaults.has("os_shell")) osShell = defaults.os_shell ?? "linux_bash"
+    if (!dirtyDefaults.has("interactive")) interactive = defaults.interactive ?? false
+    if (!dirtyDefaults.has("permission_mode")) mode = defaults.permission_mode ?? "strict"
+    if (!dirtyDefaults.has("permission_request_timeout_seconds")) timeout.value = String((defaults.permission_request_timeout_seconds ?? 900) / 60)
+    if (!dirtyDefaults.has("declared_env_vars")) envVars.value = (defaults.declared_env_vars ?? []).join(", ")
+    if (!dirtyDefaults.has("model_provider")) {
+      modelProvider = defaults.model_provider ?? "anthropic"
+      providerSelect.setOptions(MODEL_PROVIDERS.map((p) => ({ value: p.id, label: p.label })), modelProvider)
+    }
+    if (!dirtyDefaults.has("model_name")) {
+      modelName = !defaults.model_provider || defaults.model_provider === modelProvider ? defaults.model_name ?? "" : ""
+      modelTyped.value = modelName
+    }
+    for (const [group, value] of [["os", osShell], ["run", interactive ? "tui" : "headless"], ["mode", mode]]) {
+      form.querySelectorAll<HTMLInputElement>(`input[name="${group}"]`).forEach((input) => { input.checked = input.value === value })
+    }
+    timeoutRow.hidden = mode !== "request"
+    drawModeNote()
+    drawRunNote()
+    void loadModels()
+    refreshFooter()
+  }
+  useGlobal.addEventListener("change", () => { applyGlobalDefaults(); drawGlobalNote(); refreshGateways() })
 
   const form = h(
     "form",
@@ -449,6 +513,12 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
     fieldRow("Name", "How it shows in the fleet list.", name),
     fieldRow("Task", "The first thing the agent is told. Mention real paths and add matching access below.", task),
     row("Runs on", "Decides the shape of the install command.", h("div", { class: "inline" }, osControl, where)),
+    fieldRow("Rejection YAML", "Optional deny rules for this agent only. Use version: 1 and permissions with effect: deny. The same specificity rules as Access apply; this YAML cannot grant access.", rejection),
+    row("Global config", "Choose whether this agent inherits the saved global permission rules. Defaults apply only when creating an agent.",
+      h("label", { class: "check" }, useGlobal, "Use global config for this agent"), globalNote,
+      h("div", { class: "inline" }, h("a", { class: "btn btn-ghost", href: "#/config", target: "_blank", rel: "noopener" }, "Edit global config"), reloadGlobal),
+      h("details", {}, h("summary", {}, "View saved global YAML"), globalPreview),
+    ),
     row(
       "Access",
       "Nothing is allowed unless it is listed. A more specific rule beats a broader one, and paths are relative to where the install command runs.",
@@ -492,6 +562,7 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
             ],
             (v) => {
               interactive = v === "tui"
+              dirtyDefaults.add("interactive")
               drawRunNote()
             },
           ),
@@ -511,6 +582,7 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
             ],
             (v) => {
               mode = v
+              dirtyDefaults.add("permission_mode")
               timeoutRow.hidden = mode !== "request"
               drawModeNote()
             },
@@ -534,6 +606,7 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
     event.preventDefault()
     if (submit.disabled) return
     errorRow.hidden = true
+    errorBox.hidden = true
     const secretsOut: Secret[] = secrets.flatMap((s) => {
       const mappings = s.mappings.filter((m) => m.envVar.trim())
       if (!s.reference.trim() || mappings.length === 0) return []
@@ -555,26 +628,27 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
       ...(key.value ? { llm_api_key: key.value } : {}),
       interactive,
       permission_mode: mode,
-      permission_request_timeout_seconds: Math.max(1, Number(timeout.value) || 15) * 60,
+      permission_request_timeout_seconds: Math.round(Math.max(0.5, Number(timeout.value) || 15) * 60),
       declared_env_vars: envVars.value
         .split(",")
         .map((v) => v.trim())
         .filter(Boolean),
       secrets: secretsOut,
+      rejection_yaml: rejection.value,
+      use_global_config: useGlobal.checked,
+      permissions: rules,
+      acknowledge_bash_gateways: ackGateways.checked,
     }
     submit.disabled = true
     try {
       if (editing) {
         await api.patch(`/api/agents/${agent.id}`, { ...fields, ...(clearKey.checked ? { clear_llm_api_key: true } : {}) })
-        await api.put(`/api/agents/${agent.id}/permissions`, { permissions: rules, acknowledge_bash_gateways: ackGateways.checked })
         toast("Changes saved. They apply from the next run.")
         window.location.hash = `#/agents/${agent.id}`
       } else {
         const created = await api.post<Agent>("/api/agents", {
           ...fields,
           os_shell: osShell,
-          permissions: rules,
-          acknowledge_bash_gateways: ackGateways.checked,
           // The standard refusals are already in the list above, where they can be edited.
           seed_default_denies: false,
         })
@@ -583,6 +657,7 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
       }
     } catch (err) {
       errorRow.hidden = false
+      errorBox.hidden = false
       replace(errorBox, err instanceof ApiError ? err.message : String(err))
       errorRow.scrollIntoView({ block: "center" })
       refreshFooter()
@@ -591,6 +666,7 @@ export async function renderForm(main: HTMLElement, agentId?: string) {
 
   for (const g of RULE_GROUPS) drawGroup(g.id)
   refreshGateways()
+  drawGlobalNote()
   drawSecrets()
   void loadModels()
   drawModeNote()
