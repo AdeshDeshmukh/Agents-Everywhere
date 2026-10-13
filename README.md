@@ -178,6 +178,10 @@ Regression tests for all of these live in `test/permission/` and `test/tool/`, i
 
 Bug reports and fixes are welcome; [`CONTRIBUTING.md`](CONTRIBUTING.md) covers setup, tests and pull requests. Report vulnerabilities privately as described in [`SECURITY.md`](SECURITY.md), never in a public issue.
 
+Start with a [good first issue](https://github.com/codity-ai/Agents-Everywhere/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22), or browse [feature requests and larger tasks](https://github.com/codity-ai/Agents-Everywhere/issues?q=is%3Aissue%20is%3Aopen%20label%3Aenhancement). Use the issue forms and pull request template to explain the problem, scope and verification.
+
+Codity will be hiring talent from open-source contributions made to our repositories. Useful fixes, features, documentation and thoughtful reviews help us see how you work. Read about [contributing and hiring](CONTRIBUTING.md#contributions-and-hiring).
+
 ## License
 
 MIT, same as upstream. See [`LICENSE`](LICENSE): the original opencode copyright line is kept as the license requires, and Codity's modifications are copyrighted separately.

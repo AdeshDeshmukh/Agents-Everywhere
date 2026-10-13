@@ -1,0 +1,32 @@
+name: Documentation improvement
+description: Report unclear, missing or outdated contributor or user documentation
+labels: [documentation]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Documentation location
+      description: Link the page or give the file path and section.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is unclear or missing
+      description: Describe where you got stuck and who else this affects. Remove credentials and private data from examples.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested improvement
+      description: Describe the explanation, example or correction that would help.
+    validations:
+      required: true
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: Existing reports
+      options:
+        - label: I searched existing issues for this documentation gap.
+          required: true
