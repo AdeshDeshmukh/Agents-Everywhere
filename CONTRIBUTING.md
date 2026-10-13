@@ -67,7 +67,7 @@ The permission suites (`packages/agents-everywhere/test/permission/` and `test/t
 
 ## Contributions and hiring
 
-Codity will be hiring talent from open-source contributions made to our repositories. We look for useful work, sound technical judgment, clear communication and follow-through during review. Bug fixes, features, tests, documentation and thoughtful code reviews all count.
+Codity might hire talent from open-source contributions made to our repositories. We look for useful work, sound technical judgment, clear communication and follow-through during review. Bug fixes, features, tests, documentation and thoughtful code reviews all count.
 
 Start with an issue that interests you and make the change easy to review. Strong contributions can lead to a hiring conversation with Codity; a contribution does not guarantee a job offer.
 

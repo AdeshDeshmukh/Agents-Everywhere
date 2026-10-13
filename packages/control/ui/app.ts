@@ -6,6 +6,7 @@ import { renderDetail } from "./views/detail"
 import { renderForm } from "./views/form"
 import { renderList } from "./views/list"
 import { renderRun } from "./views/run"
+import { renderGlobalConfig } from "./views/config"
 
 const root = document.getElementById("app")!
 let cleanup: (() => void) | void = undefined
@@ -81,7 +82,7 @@ function shell(signedIn: boolean): HTMLElement {
         "ghost",
       )
     : null
-  replace(root, h("header", { class: "topbar" }, brand(), h("div", { class: "topbar-actions" }, theme, signOut)), main)
+  replace(root, h("header", { class: "topbar" }, brand(), h("div", { class: "topbar-actions" }, signedIn ? h("a", { class: "btn btn-ghost", href: "#/config" }, "Global config") : null, theme, signOut)), main)
   return main
 }
 
@@ -130,6 +131,7 @@ async function route(main: HTMLElement) {
   try {
     if (parts.length === 0) cleanup = await renderList(main)
     else if (parts[0] === "new") await renderForm(main)
+    else if (parts[0] === "config") await renderGlobalConfig(main)
     else if (parts[0] === "agents" && parts.length === 2) cleanup = await renderDetail(main, parts[1])
     else if (parts[0] === "agents" && parts[2] === "edit") await renderForm(main, parts[1])
     else if (parts[0] === "agents" && parts[2] === "runs" && parts[3]) cleanup = await renderRun(main, parts[1], parts[3])

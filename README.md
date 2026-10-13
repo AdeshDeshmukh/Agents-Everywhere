@@ -180,7 +180,7 @@ Bug reports and fixes are welcome; [`CONTRIBUTING.md`](CONTRIBUTING.md) covers s
 
 Start with a [good first issue](https://github.com/codity-ai/Agents-Everywhere/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22), or browse [feature requests and larger tasks](https://github.com/codity-ai/Agents-Everywhere/issues?q=is%3Aissue%20is%3Aopen%20label%3Aenhancement). Use the issue forms and pull request template to explain the problem, scope and verification.
 
-Codity will be hiring talent from open-source contributions made to our repositories. Useful fixes, features, documentation and thoughtful reviews help us see how you work. Read about [contributing and hiring](CONTRIBUTING.md#contributions-and-hiring).
+Codity might hire talent from open-source contributions made to our repositories. Useful fixes, features, documentation and thoughtful reviews help us see how you work. Read about [contributing and hiring](CONTRIBUTING.md#contributions-and-hiring).
 
 ## License
 

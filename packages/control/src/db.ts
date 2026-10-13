@@ -103,6 +103,16 @@ const MIGRATIONS: string[] = [
     expires_at TEXT NOT NULL
   );
   `,
+  `
+  ALTER TABLE agents ADD COLUMN rejection_yaml TEXT NOT NULL DEFAULT '';
+  ALTER TABLE agents ADD COLUMN use_global_config INTEGER NOT NULL DEFAULT 0;
+  CREATE TABLE global_config (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    yaml TEXT NOT NULL,
+    revision INTEGER NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  `,
 ]
 
 export function openDatabase(file: string): Database {

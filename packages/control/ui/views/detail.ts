@@ -45,8 +45,14 @@ export async function renderDetail(main: HTMLElement, id: string): Promise<() =>
   const approvalCount = h("span", { class: "micro-label" })
   const runsBody = h("div")
   const band = h("section", { class: "panel" })
+  const rulesBody = h("div", { class: "panel-body stack" })
   const seen = new Set<string>()
   let agent = await api.get<Agent>(`/api/agents/${id}`)
+
+  const drawRules = () => replaceIfChanged(rulesBody, JSON.stringify([agent.effective_permissions, agent.use_global_config, agent.rejection_yaml, agent.status]), () => [
+    h("p", { class: "hint" }, agent.status === "revoked" ? "This agent is revoked. Its own Access and rejection YAML are shown below." : `Rules for the next run include Access, this agent's rejection YAML${agent.use_global_config ? ", and the saved global config" : ""}. Active runs keep the rules they started with.`),
+    ruleGrid(agent.effective_permissions),
+  ])
 
   const drawApprovals = async () => {
     if (agent.permission_mode !== "request" && agent.pending_permission_requests === 0) {
@@ -167,6 +173,7 @@ export async function renderDetail(main: HTMLElement, id: string): Promise<() =>
 
   const refresh = async () => {
     agent = await api.get<Agent>(`/api/agents/${id}`)
+    drawRules()
     drawRuns()
     await drawApprovals()
     refreshTimes(main)
@@ -256,7 +263,7 @@ export async function renderDetail(main: HTMLElement, id: string): Promise<() =>
             commandBox,
           ),
         ),
-        h("section", { class: "panel" }, sectionHead("Rules"), h("div", { class: "panel-body" }, ruleGrid(agent.permissions))),
+        h("section", { class: "panel" }, sectionHead("Rules"), rulesBody),
         h(
           "section",
           { class: "panel" },
@@ -284,6 +291,7 @@ export async function renderDetail(main: HTMLElement, id: string): Promise<() =>
       ),
     ),
   )
+  drawRules()
   drawRuns()
   await drawApprovals()
   return poll(REFRESH_MS, refresh)

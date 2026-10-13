@@ -15,6 +15,7 @@ import type {
 } from "@agents-everywhere/harness/protocol"
 import { nowIso } from "./db"
 import type { Rule } from "./policy"
+import { configuredRules, EMPTY_GLOBAL_YAML, parseGlobalYaml } from "./configuration"
 
 export interface AgentRow {
   id: string
@@ -29,6 +30,8 @@ export interface AgentRow {
   permission_mode: PermissionModeValue
   permission_request_timeout_seconds: number
   declared_env_vars: string
+  rejection_yaml: string
+  use_global_config: number
   status: "draft" | "active" | "revoked"
   created_at: string
   updated_at: string
@@ -111,6 +114,8 @@ export interface NewAgent {
   permission_mode: PermissionModeValue
   permission_request_timeout_seconds: number
   declared_env_vars: string[]
+  rejection_yaml?: string
+  use_global_config?: boolean
 }
 
 export type AgentPatch = Partial<Omit<NewAgent, "os_shell">> & { clear_llm_api_key?: boolean }
@@ -124,6 +129,35 @@ export class Store {
     return this.db.transaction(fn)()
   }
 
+  globalConfig() {
+    return (
+      this.db
+        .query<
+          { yaml: string; revision: number; updated_at: string },
+          []
+        >("SELECT yaml, revision, updated_at FROM global_config WHERE id = 1")
+        .get() ?? { yaml: EMPTY_GLOBAL_YAML, revision: 0, updated_at: null }
+    )
+  }
+
+  saveGlobalConfig(yaml: string, revision: number): boolean {
+    return this.transaction(() => {
+      if (this.globalConfig().revision !== revision) return false
+      this.db
+        .query(
+          "INSERT INTO global_config (id, yaml, revision, updated_at) VALUES (1, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET yaml = excluded.yaml, revision = excluded.revision, updated_at = excluded.updated_at",
+        )
+        .run(yaml, revision + 1, nowIso())
+      return true
+    })
+  }
+
+  effectiveRules(agent: AgentRow): Rule[] {
+    const global =
+      agent.use_global_config && agent.status !== "revoked" ? parseGlobalYaml(this.globalConfig().yaml).permissions : []
+    return configuredRules(this.rules(agent.id), agent.rejection_yaml, global)
+  }
+
   // ── Agents ──────────────────────────────────────────────────────────────
 
   createAgent(agent: NewAgent, rules: Rule[], secrets: SecretInput[]): string {
@@ -133,8 +167,8 @@ export class Store {
       this.db
         .query(
           `INSERT INTO agents (id, label, os_shell, location_label, task, model_provider, model_name, llm_api_key_sealed,
-             interactive, permission_mode, permission_request_timeout_seconds, declared_env_vars, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
+             interactive, permission_mode, permission_request_timeout_seconds, declared_env_vars, rejection_yaml, use_global_config, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
         )
         .run(
           id,
@@ -149,6 +183,8 @@ export class Store {
           agent.permission_mode,
           agent.permission_request_timeout_seconds,
           JSON.stringify(agent.declared_env_vars),
+          agent.rejection_yaml ?? "",
+          agent.use_global_config ? 1 : 0,
           now,
           now,
         )
@@ -229,6 +265,8 @@ export class Store {
     if (patch.permission_request_timeout_seconds !== undefined)
       columns.permission_request_timeout_seconds = patch.permission_request_timeout_seconds
     if (patch.declared_env_vars !== undefined) columns.declared_env_vars = JSON.stringify(patch.declared_env_vars)
+    if (patch.rejection_yaml !== undefined) columns.rejection_yaml = patch.rejection_yaml
+    if (patch.use_global_config !== undefined) columns.use_global_config = patch.use_global_config ? 1 : 0
     const names = Object.keys(columns)
     if (names.length === 0) return
     // Column names come from the fixed list above, never from the request.

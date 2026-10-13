@@ -19,6 +19,7 @@
   "dependencies": {
     "@agents-everywhere/core": "workspace:*",
     "@agents-everywhere/harness": "workspace:*",
+    "yaml": "2.9.1",
     "zod": "catalog:"
   },
   "devDependencies": {
