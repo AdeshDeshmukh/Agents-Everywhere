@@ -2,6 +2,7 @@ name: ci
 
 on:
   push:
+    branches: ["**"]
   pull_request:
   workflow_call:
 
@@ -19,8 +20,9 @@ jobs:
           bun-version: 1.3.14
       - uses: actions/setup-node@v4
         with:
-          # The oldest Node the runner supports; the bundle test runs it there.
-          node-version: 18
+          # Native dependency installation requires a current Node 22 runtime.
+          node-version: 22
+          check-latest: true
       - run: bun install --frozen-lockfile
 
       - name: Typecheck every workspace and lint
@@ -32,17 +34,22 @@ jobs:
           done
           bun run lint
 
+      - uses: actions/setup-node@v4
+        with:
+          # Verify the runner bundle on its oldest supported Node version.
+          node-version: 18
+
       - name: Runner
         working-directory: packages/harness
-        run: bun run test
-
-      - name: Control plane and runner-protocol conformance
-        working-directory: packages/control
         run: bun run test
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Control plane and runner-protocol conformance
+        working-directory: packages/control
+        run: bun run test
 
       - name: Full engine suite
         working-directory: packages/agents-everywhere

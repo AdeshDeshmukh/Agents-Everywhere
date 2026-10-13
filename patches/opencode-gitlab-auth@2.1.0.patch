@@ -1,4 +1,5 @@
 diff --git a/dist/index.d.ts b/dist/index.d.ts
+index eb277f3a18c8c6ca974b8fec801c75b17852edd7..846b4bdc1225b4021d5c1cdc294d24439cd64549 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
 @@ -1,4 +1,4 @@
@@ -8,9 +9,19 @@ diff --git a/dist/index.d.ts b/dist/index.d.ts
   * Normalize an instance URL to `protocol//host`, falling back to the default
   * (GITLAB_INSTANCE_URL env or gitlab.com) when the value is empty/undefined.
 diff --git a/dist/index.js b/dist/index.js
+index 8af2f91bfe962691c9105ec63e30e6b060676d24..f8dce2882b8e51fd66c586d66a4784ee2bb2eb3b 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -53,8 +53,7 @@
+@@ -2,7 +2,7 @@ import { GitLabOAuthFlow } from './oauth-flow.js';
+ import { CallbackServer } from './callback-server.js';
+ import fs from 'fs';
+ import path from 'path';
+-import os from 'os';
++import { xdgData } from 'xdg-basedir';
+ /**
+  * GitLab OAuth constants
+  */
+@@ -53,8 +53,7 @@ export function validateInstanceUrl(value) {
   */
  function debugLog(message, data) {
      try {
@@ -20,7 +31,7 @@ diff --git a/dist/index.js b/dist/index.js
          // Ensure log directory exists
          if (!fs.existsSync(logDir)) {
              fs.mkdirSync(logDir, { recursive: true });
-@@ -74,16 +73,10 @@
+@@ -74,16 +73,9 @@ function debugLog(message, data) {
   * Get OpenCode auth file path
   */
  function getAuthPath() {
@@ -33,15 +44,13 @@ diff --git a/dist/index.js b/dist/index.js
 -        return path.join(homeDir, '.local', 'share', 'opencode', 'auth.json');
 -    }
 -    return path.join(homeDir, '.opencode', 'auth.json');
--}
-+    const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
-+    return path.join(dataHome, 'agents-everywhere', 'auth.json');
-+}
++    return path.join(xdgData, 'agents-everywhere', 'auth.json');
+ }
 +
  /**
   * Save OAuth auth data to OpenCode's auth.json
   * Workaround for OpenCode not saving the enterpriseUrl field
-@@ -110,7 +103,7 @@
+@@ -110,7 +102,7 @@ async function saveOAuthData(access, refresh, expires, enterpriseUrl) {
          enterpriseUrl,
      };
      // Write back
@@ -50,7 +59,7 @@ diff --git a/dist/index.js b/dist/index.js
      fs.chmodSync(authPath, 0o600);
  }
  /**
-@@ -137,7 +130,7 @@
+@@ -137,7 +129,7 @@ async function savePATData(key, enterpriseUrl) {
          enterpriseUrl,
      };
      // Write back
@@ -59,7 +68,7 @@ diff --git a/dist/index.js b/dist/index.js
      fs.chmodSync(authPath, 0o600);
  }
  /**
-@@ -162,7 +155,7 @@
+@@ -162,7 +154,7 @@ function persistPatInstanceUrl(instanceUrl) {
          }
          const metadata = { ...(gitlab.metadata ?? {}), instanceUrl };
          authData.gitlab = { ...gitlab, metadata };
@@ -68,7 +77,7 @@ diff --git a/dist/index.js b/dist/index.js
          fs.chmodSync(authPath, 0o600);
      }
      catch {
-@@ -243,7 +236,7 @@
+@@ -243,7 +235,7 @@ async function refreshTokenIfNeeded(authData, auth, fallbackUrl) {
                      const content = fs.readFileSync(authPath, 'utf-8');
                      const authDataFile = JSON.parse(content);
                      delete authDataFile.gitlab;
@@ -77,7 +86,7 @@ diff --git a/dist/index.js b/dist/index.js
                  }
              }
              throw error;
-@@ -341,6 +334,9 @@
+@@ -341,6 +333,9 @@ export const gitlabAuthPlugin = async (_input) => {
                      },
                  ],
                  async authorize(inputs) {
@@ -87,3 +96,17 @@ diff --git a/dist/index.js b/dist/index.js
                      const instanceUrl = normalizeOptionalInstanceUrl(inputs?.instanceUrl);
                      // Normalize instance URL
                      let normalizedUrl;
+diff --git a/package.json b/package.json
+index 8c0181b13f5ab2304301972e78905ce2370ccaa4..cb0cc3566a28d1518e6513c307d12ca7101d5e13 100644
+--- a/package.json
++++ b/package.json
+@@ -70,7 +70,8 @@
+     "@fastify/rate-limit": "^10.2.0",
+     "@opencode-ai/plugin": "*",
+     "fastify": "^5.2.0",
+-    "open": "^10.0.0"
++    "open": "^10.0.0",
++    "xdg-basedir": "5.1.0"
+   },
+   "devDependencies": {
+     "@commitlint/cli": "^18.4.3",

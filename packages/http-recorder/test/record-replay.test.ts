@@ -135,7 +135,7 @@ describe("http-recorder", () => {
               method: "POST",
               url: "https://example.test/path?key=sk-123456789012345678901234",
               headers: {},
-              body: JSON.stringify({ nested: `AIza${"test_only_not_a_real_key".repeat(2)}` }),
+              body: JSON.stringify({ nested: `AIzaSy${"0".repeat(33)}` }),
             },
             response: {
               status: 200,
