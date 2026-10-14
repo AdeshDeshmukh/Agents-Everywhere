@@ -18,7 +18,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Native dependency installation requires a current Node 22 runtime.
           node-version: 22
@@ -34,7 +34,7 @@ jobs:
           done
           bun run lint
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Verify the runner bundle on its oldest supported Node version.
           node-version: 18
@@ -43,7 +43,7 @@ jobs:
         working-directory: packages/harness
         run: bun run test
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
