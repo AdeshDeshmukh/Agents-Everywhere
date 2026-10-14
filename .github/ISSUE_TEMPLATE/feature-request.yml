@@ -38,6 +38,11 @@ body:
     attributes:
       label: Alternatives and current workaround
       description: Mention existing capabilities you tried and why they do not solve the problem.
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Example workflow and permissions
+      description: For example, EC2 incident investigation or a deployment. Describe the steps the agent should perform, the access it would need, and where an operator should approve or review the result. Use sample data and omit credentials.
   - type: dropdown
     id: component
     attributes:

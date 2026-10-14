@@ -35,6 +35,8 @@ The runner always calls out and the control plane only answers, so nothing ever 
 
 ## Quick start
 
+Watch the [2-minute-51-second walkthrough](docs/assets/agents-everywhere-walkthrough.mp4): create an agent, configure YAML restrictions, approve an extra read, see a forbidden read refused, and publish a release with scoped permissions. The recording uses local sample data and scripted model responses with real UI actions and tool execution.
+
 agents-everywhere is pre-release: no binaries or packages are published yet, so build the engine from source. Use [Bun](https://bun.sh) 1.3.14, the version used by CI; build scripts accept compatible newer Bun 1.x versions.
 
 The runner supports Linux with glibc and macOS on x64 or arm64. Windows and Alpine/musl are not supported. Agent machines need Node.js 18 or newer, Bash and curl; a model-provider API key is required for a real run. A compiled control plane serves its own platform's engine; provide builds for additional machine platforms with `--binaries`, as described in [Running the control plane](docs/control-plane.md).
