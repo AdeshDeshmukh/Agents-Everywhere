@@ -41,24 +41,106 @@ agents-everywhere is pre-release: no binaries or packages are published yet, so 
 
 The runner supports Linux with glibc and macOS on x64 or arm64. Windows and Alpine/musl are not supported. Agent machines need Node.js 18 or newer, Bash and curl; a model-provider API key is required for a real run. A compiled control plane serves its own platform's engine; provide builds for additional machine platforms with `--binaries`, as described in [Running the control plane](docs/control-plane.md).
 
-1. Build the engine and start a control plane. It prints an admin token the first time; keep it.
+1. Copy this entire block into a terminal on macOS or Ubuntu. It installs missing system tools, installs compatible Bun and Node.js versions when needed, clones or reuses the checkout, builds for your machine and starts the control plane. It may ask for your administrator password for system packages; Homebrew can also install Apple's Command Line Tools on macOS. The control plane prints an admin token on its first start; keep it for signing in.
 
    ```bash
-   git clone https://github.com/codity-ai/Agents-Everywhere agents-everywhere
-   cd agents-everywhere
-   bun install
-   ./packages/agents-everywhere/script/build.ts --single
-   target="$(bun -p 'process.platform + "-" + process.arch')"
-   "./packages/agents-everywhere/dist/agents-everywhere-${target}/bin/agents-everywhere" control
+   bash <<'AGENTS_SETUP'
+   set -eo pipefail
+   trap 'printf "Setup failed at line %s. Fix the error above and rerun this block.\n" "$LINENO" >&2' ERR
+   fail() { printf '%s\n' "$1" >&2; exit 1; }
+   setup_packages=()
+   case "$(uname -s)" in
+     Linux)
+       command -v apt-get >/dev/null || fail "This Linux setup requires Ubuntu or another apt-based distribution."
+       for setup_dependency in git:git curl:curl unzip:unzip ssh:openssh-client cc:build-essential make:build-essential python3:python3 pkg-config:pkg-config xz:xz-utils; do
+         command -v "${setup_dependency%%:*}" >/dev/null || setup_packages+=("${setup_dependency#*:}")
+       done
+       if [ "$(dpkg-query -W -f='${Status}' ca-certificates 2>/dev/null)" != "install ok installed" ]; then
+         setup_packages+=(ca-certificates)
+       fi
+       if [ "${#setup_packages[@]}" -gt 0 ]; then
+         setup_root=()
+         if [ "$(id -u)" -ne 0 ]; then
+           command -v sudo >/dev/null || fail "Install sudo or run the missing system-package installation as root."
+           setup_root=(sudo)
+         fi
+         "${setup_root[@]}" apt-get update
+         "${setup_root[@]}" apt-get install -y ca-certificates "${setup_packages[@]}"
+       fi
+       ;;
+     Darwin)
+       export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+       for setup_dependency in git:git curl:curl unzip:unzip python3:python pkg-config:pkgconf; do
+         command -v "${setup_dependency%%:*}" >/dev/null || setup_packages+=("${setup_dependency#*:}")
+       done
+       if ! xcode-select -p >/dev/null 2>&1; then setup_packages+=(git); fi
+       if [ "${#setup_packages[@]}" -gt 0 ]; then
+         if ! command -v brew >/dev/null; then
+           sudo -v
+           setup_brew_installer="$(/usr/bin/curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+           NONINTERACTIVE=1 /bin/bash -c "$setup_brew_installer"
+         fi
+         command -v brew >/dev/null || fail "Homebrew installation did not complete. Resolve its error above and rerun."
+         brew install "${setup_packages[@]}"
+       fi
+       ;;
+     *) fail "This setup supports macOS and Ubuntu."
+   esac
+
+   export PATH="${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
+   if ! command -v bun >/dev/null || ! bun -e 'const [major, minor, patch] = Bun.version.split(".").map(Number); process.exit(major === 1 && (minor > 3 || (minor === 3 && patch >= 14)) ? 0 : 1)' >/dev/null 2>&1; then
+     curl -fsSL https://bun.sh/install | bash -s bun-v1.3.14
+     hash -r
+   fi
+   bun --version
+
+   if ! command -v node >/dev/null || ! node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 22 ? 0 : 1)' >/dev/null 2>&1; then
+     export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+     if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+       curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.8/install.sh | METHOD=script bash
+     fi
+     # shellcheck source=/dev/null
+     . "$NVM_DIR/nvm.sh" --no-use
+     nvm install 22
+     nvm use 22
+   fi
+   node --version
+
+   if [ -f packages/agents-everywhere/script/build.ts ] && [ -f package.json ]; then
+     setup_checkout="$PWD"
+   elif [ -e agents-everywhere ]; then
+     setup_checkout="$PWD/agents-everywhere"
+   else
+     setup_checkout="$PWD/agents-everywhere"
+     setup_repo_url="${AGENTS_EVERYWHERE_REPO_URL:-https://github.com/codity-ai/Agents-Everywhere.git}"
+     if GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c http.extraHeader= ls-remote "$setup_repo_url" HEAD >/dev/null 2>&1; then
+       git -c credential.helper= -c http.extraHeader= clone "$setup_repo_url" "$setup_checkout"
+     elif GIT_TERMINAL_PROMPT=0 git ls-remote "$setup_repo_url" HEAD >/dev/null 2>&1; then
+       git clone "$setup_repo_url" "$setup_checkout"
+     elif GIT_SSH_COMMAND='ssh -o BatchMode=yes -o ConnectTimeout=10' git ls-remote git@github.com:codity-ai/Agents-Everywhere.git HEAD >/dev/null 2>&1; then
+       git clone git@github.com:codity-ai/Agents-Everywhere.git "$setup_checkout"
+     else
+       fail "Cannot read the repository. For a private repo, use an authorized GitHub account or set AGENTS_EVERYWHERE_REPO_URL to your authorized SSH clone URL, then rerun."
+     fi
+   fi
+   if [ ! -f "$setup_checkout/package.json" ] || [ ! -f "$setup_checkout/packages/agents-everywhere/script/build.ts" ]; then
+     fail "The existing agents-everywhere folder is not a valid checkout. Run this block from another parent directory."
+   fi
+   cd "$setup_checkout"
+   if [ "$(git rev-parse --show-toplevel 2>/dev/null)" != "$(pwd -P)" ]; then
+     fail "This folder is not the root of a Git checkout. Run setup from the repository root or another parent directory."
+   fi
+   bun -e 'const p = await Bun.file("package.json").json(); if (p.name !== "agents-everywhere") throw new Error("This directory is not the Agents Everywhere repository")'
+   bun install --frozen-lockfile
+   AGENTS_EVERYWHERE_RELEASE='' bun run packages/agents-everywhere/script/build.ts --single
+   setup_target="$(bun -p 'process.platform + "-" + process.arch')"
+   exec "./packages/agents-everywhere/dist/agents-everywhere-${setup_target}/bin/agents-everywhere" control
+   AGENTS_SETUP
    ```
 
-   These commands work in Bash or Zsh on macOS and Linux. `--single` builds only for the platform and architecture running Bun, and `target` selects that same binary. On Apple silicon Macs the directory is `agents-everywhere-darwin-arm64`; on Intel Macs it is `agents-everywhere-darwin-x64`.
+   Paste the block from a parent directory or from the repository root. Existing checkouts are reused without pulling or replacing local changes. Compatible installed Bun and Node.js versions are reused. While the repository is private, GitHub read access is still required; the command tries anonymous HTTPS, configured HTTPS credentials and then your GitHub SSH key. For a custom SSH host alias, set `AGENTS_EVERYWHERE_REPO_URL` to that clone URL before pasting the block. Authentication errors stop setup before installation of project dependencies or building. See [GitHub's cloning troubleshooting guide](https://docs.github.com/en/repositories/creating-and-managing-repositories/troubleshooting-cloning-errors).
 
-   If you already built successfully on an Apple silicon Mac, run this from the repository folder without rebuilding:
-
-   ```bash
-   ./packages/agents-everywhere/dist/agents-everywhere-darwin-arm64/bin/agents-everywhere control
-   ```
+   The build uses `--single`, so it produces the binary for the current OS and architecture. First-time setup needs internet access and can take several minutes. Tool installation uses the official [Bun](https://bun.sh/docs/installation), [nvm](https://github.com/nvm-sh/nvm#install--update-script) and [Homebrew](https://docs.brew.sh/Installation) installers as needed.
 
 2. Open http://127.0.0.1:4800, sign in with the token, and create an agent: a task, a model and its API key, and the paths, commands and URLs it may use.
 
