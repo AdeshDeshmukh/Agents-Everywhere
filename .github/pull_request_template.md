@@ -14,12 +14,17 @@
 
 <!-- Mention config changes, database migrations, protocol/API changes or remaining work. Write "None" if this does not apply. -->
 
+## Permission and deployment impact
+
+<!-- If applicable, describe changes to grants, denies, approvals, credentials, install commands or deployment behavior. Explain which sample configuration or workflow you verified. Write "None" otherwise. Report suspected vulnerabilities privately through SECURITY.md instead of this public PR. -->
+
 ## Checklist
 
 - [ ] One logical change, with an imperative title ("Fix symlink check on macOS")
 - [ ] Relevant package tests and typechecks are recorded above, with unrun checks identified
 - [ ] Permission changes include a regression case under `test/permission/` or `test/tool/`, or this does not apply
 - [ ] Public Protocol or Server HttpApi changes regenerate the client with `bun run generate` from `packages/client`, or this does not apply
+- [ ] Changed user-facing behavior is documented, or this does not apply
 - [ ] No unrelated formatting or refactors in the diff
 - [ ] No credentials or private data in the diff, logs or screenshots
 

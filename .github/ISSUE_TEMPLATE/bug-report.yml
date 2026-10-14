@@ -4,7 +4,7 @@ labels: [bug]
 body:
   - type: markdown
     attributes:
-      value: Describe a reproducible problem. Remove credentials and private data from logs and screenshots. Report vulnerabilities privately through SECURITY.md.
+      value: Describe a reproducible problem. Remove API keys, admin tokens, install-command credentials and private data from logs and screenshots. Report suspected permission bypasses or other vulnerabilities privately through [SECURITY.md](https://github.com/codity-ai/Agents-Everywhere/blob/main/SECURITY.md).
   - type: textarea
     id: description
     attributes:
@@ -58,6 +58,36 @@ body:
     attributes:
       label: Bun and Node.js versions
       description: Output of bun --version and node --version, if available.
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where the agent runs
+      options:
+        - Local laptop or workstation
+        - AWS EC2 instance
+        - Other VM or server
+        - Container or Kubernetes pod
+        - CI runner
+        - Other or not applicable
+  - type: input
+    id: model
+    attributes:
+      label: Model provider and model
+      description: Include the provider and model name if relevant. Never include the API key or an authenticated endpoint URL.
+  - type: dropdown
+    id: permission-mode
+    attributes:
+      label: Permission mode
+      options:
+        - Strict
+        - Ask me
+        - Not applicable or not sure
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Relevant configuration
+      description: If relevant, include sanitized path and command grants, rejection YAML, and whether Use global config is enabled. Describe whether the runner and control plane are on different machines. Use sample paths and remove credentials, hostnames and private addresses. Report a suspected permission bypass privately instead.
+      render: yaml
   - type: input
     id: terminal
     attributes:
@@ -75,4 +105,6 @@ body:
       label: Existing reports
       options:
         - label: I searched existing issues for this problem.
+          required: true
+        - label: I removed credentials and private data from this report and its attachments.
           required: true

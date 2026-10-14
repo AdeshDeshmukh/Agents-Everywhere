@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Installation, configuration and runner documentation
+    url: https://github.com/codity-ai/Agents-Everywhere/blob/main/docs/README.md
+    about: Read the setup and permission documentation before opening a support issue.
   - name: Report a security vulnerability
     url: https://github.com/codity-ai/Agents-Everywhere/security/advisories/new
     about: Please report vulnerabilities privately, not as a public issue.

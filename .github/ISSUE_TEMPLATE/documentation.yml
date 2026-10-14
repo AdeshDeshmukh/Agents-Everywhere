@@ -21,8 +21,11 @@ body:
     attributes:
       label: Suggested improvement
       description: Describe the explanation, example or correction that would help.
-    validations:
-      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: If the documentation disagrees with behavior, include the version or commit you tested.
   - type: checkboxes
     id: duplicate-check
     attributes:

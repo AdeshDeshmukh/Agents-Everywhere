@@ -3,7 +3,14 @@ node_modules
 .worktrees
 .sst
 .env
-.env.local
+.env.*
+# Only commit sanitized environment examples, never real credentials.
+!.env.example
+!.env.sample
+!.env.template
+!.env.*.example
+!.env.*.sample
+!.env.*.template
 .idea
 .vscode
 .codex
