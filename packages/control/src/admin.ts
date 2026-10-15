@@ -435,6 +435,10 @@ export class AdminApi {
         }
         const rows = store.events(runId, cursor, EVENTS_PAGE)
         for (const e of rows) {
+          if (e.seq > throughSeq) {
+            controller.close()
+            return
+          }
           cursor = Math.max(cursor, e.seq)
           controller.enqueue(
             `${JSON.stringify({
