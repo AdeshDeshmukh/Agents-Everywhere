@@ -83,6 +83,23 @@ export async function renderRun(main: HTMLElement, agentId: string, runId: strin
     a.click()
     URL.revokeObjectURL(url)
   })
+  // The complete stored event history as NDJSON: every event in sequence
+  // order with timestamps, types and usage, not just the rendered lines.
+  const exportNdjson = iconButton("download", "Download structured export (NDJSON)", async () => {
+    try {
+      const res = await fetch(`/api/agents/${agentId}/runs/${runId}/export`, { credentials: "same-origin" })
+      if (!res.ok) throw new ApiError(res.status, `The server answered ${res.status}.`)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const disposition = res.headers.get("content-disposition") ?? ""
+      const named = disposition.match(/filename="([^"]+)"/)?.[1] ?? `run-${runId.slice(0, 8)}.ndjson`
+      const a = h("a", { href: url, download: named })
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : String(err))
+    }
+  })
   let lastSeq = 0
   let cost = 0
   const placeholder = h("li", {}, h("time"), h("div", { class: "entry-notice" }, "Nothing reported yet."))
@@ -134,7 +151,7 @@ export async function renderRun(main: HTMLElement, agentId: string, runId: strin
           h("h1", {}, run.hostname ?? "Unnamed machine"),
           statusLine,
         ),
-        h("div", { class: "inline" }, exportButton, live && !run.kill_requested ? stop : null),
+        h("div", { class: "inline" }, exportButton, exportNdjson, live && !run.kill_requested ? stop : null),
       ),
     )
     replace(
